@@ -4,7 +4,7 @@
 
 本程序源文件为python代码，使用bilibili_api数据库，该数据库要求版本**python<3.14**. 程序开发时使用python 3.13.4，测试稳定版为python 3.11.4.
 
-程序源文件代码中固定ROOM_ID=27885573，若需监测其他直播间，请修改源码并重新生成exe文件。pyinstaller指令为：
+程序源文件代码中可自定义直播间房间号，若有修改代码需求，请修改源码并重新生成exe文件。pyinstaller指令为：
 
 ```
 pyinstaller --clean --onefile --hidden-import="httpx" --hidden-import="aiohttp" --collect-all httpx --collect-all bilibili_api collector10.py
