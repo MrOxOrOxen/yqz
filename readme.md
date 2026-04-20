@@ -1,4 +1,22 @@
-# LOGS
+# 哔哩哔哩直播盲盒盈亏监测工具
+
+本工具测试信息来源于B站用户“晚安卡米宝宝” (UID: 1224551233)，测试直播间为：
+
+- 27885573：云崎早_haya
+- 503308916：千秋斋主
+- 672342685：乃琳Queen
+- 12939237：有棵里里
+- 7735318：Weibo-回忆
+- 8618005：凉哈皮
+- 3546569288714792：果宝Official
+- 57863910：王者荣耀
+- 50329118：哔哩哔哩英雄联盟赛事（短号6）
+
+## Apr 20 8:29AM
+
+由于bilibili_api需要动态监测运行库，pyinstaller -F并不可行。使用pyinstaller -D重新构建程序。
+
+优化代码部分细节。
 
 ## Apr 19
 
@@ -9,4 +27,14 @@
 
 直接运行collectors9.exe即可。请注意，该程序若重启所有统计数据都将归零。
 
-开发日志后续更新。
+关于bilibili礼物的代码：
+
+bilibili的礼物信息分为两类：SEND_GIFT和COMBO_SEND. 部分日志具有代表性：
+
+- log_first_try.txt: 非盲盒类礼物单击combo第一次送出，或仅送出一次
+- log_second_try.txt: 非盲盒类礼物单击combo第二次到最后一次送出
+- log_last_try.txt: 非盲盒类礼物单击combo后汇总发送的combo日志
+- log_multiple.txt: 非盲盒类礼物批量送出
+- log_box_first_try.txt: 盲盒类礼物单击combo第一次送出，或仅送出一次
+- log_box_multiple.txt: 盲盒类礼物批量送出
+
