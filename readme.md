@@ -10,6 +10,8 @@
 pyinstaller --clean -D -w --hidden-import="httpx" --hidden-import="aiohttp" --collect-all httpx --collect-all bilibili_api collector9.py
 ```
 
+受bilibili_api包体限制，无法使用pyinstaller -F生成单独exe文件运行，请务必使用pyinstaller -D生成exe文件本体及附加文件。
+
 本工具测试信息来源于B站用户“晚安卡米宝宝” (UID: 1224551233)，测试直播间为：
 
 - 27885573：云崎早_haya
