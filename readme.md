@@ -10,7 +10,7 @@
 pyinstaller --clean --onefile --hidden-import="httpx" --hidden-import="aiohttp" --collect-all httpx --collect-all bilibili_api collector10.py
 ```
 
-受bilibili_api包体限制，无法使用pyinstaller -F生成单独可执行文件运行，请务必使用pyinstaller -onefile生成单体可执行文件，或者使用pyinstaller -D生成可执行文件本体及附加文件。
+受bilibili_api包体限制，无法使用pyinstaller -F生成单独可执行文件运行，请务必使用pyinstaller --onefile生成单体可执行文件，或者使用pyinstaller -D生成可执行文件本体及附加文件。
 
 本工具测试信息来源于B站用户“晚安卡米宝宝” (UID: 1224551233)，测试直播间为：
 
@@ -27,7 +27,7 @@ pyinstaller --clean --onefile --hidden-import="httpx" --hidden-import="aiohttp" 
 
 ## Apr 20
 
-更新：collector10.exe
+**更新：collector10.exe**
 
 由于bilibili_api需要动态监测运行库，pyinstaller -F并不可行。使用pyinstaller --onefile重新构建程序。
 
@@ -37,7 +37,7 @@ pyinstaller --clean --onefile --hidden-import="httpx" --hidden-import="aiohttp" 
 
 对程序的内存占用、CPU占用进行了优化。
 
-更新：collector_sim_v2.exe
+**更新：collector_sim_v2.exe**
 
 设计了一个用户抽取心动盲盒一定亏损的模拟器，具体算法为：
 
@@ -55,7 +55,7 @@ pyinstaller --clean --onefile --hidden-import="httpx" --hidden-import="aiohttp" 
 
 直接运行collectors9.exe即可。请注意，该程序若重启所有统计数据都将归零。
 
-关于bilibili礼物的代码：
+**关于bilibili礼物的代码：**
 
 bilibili的礼物信息分为两类：SEND_GIFT和COMBO_SEND. 部分日志具有代表性：
 
