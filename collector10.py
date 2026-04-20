@@ -59,7 +59,8 @@ async def on_gift(event):
     
     if blind_data:
         # 盲盒打印逻辑
-        print(f"[数据] {uname} 送出盲盒 x{num}")
+        # print(f"{uname} 送出盲盒 x{num}")
+        print(f"+{num}")
         bg_name = blind_data.get('original_gift_name')
         bg_price = blind_data.get('original_gift_price', 0) / 1000 
         g_value = blind_data.get('gift_tip_price', 0) / 1000 
