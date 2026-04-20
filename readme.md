@@ -138,3 +138,23 @@ async def on_gift(event):
                        -> uid
 ```
 
+自定义监听函数：
+
+```python
+@room.on('COMBO_SEND')
+async def on_gift(event):
+    data = event['data']
+```
+
+log_last_try: 不存在batch_combo_send这一分支。
+
+```
+"cmd": "COMBO_SEND"
+"data" -> batch_combo_num
+       -> combo_total_coin
+       -> gift_id_
+       -> gift_name
+       -> gift_num: 0
+       -> sender_uinfo -> base -> name
+                       -> uid
+```
