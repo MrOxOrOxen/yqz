@@ -2,15 +2,15 @@
 
 本工具只能本地运行。通过监测直播间礼物情况，提取并统计出各类盲盒成本、收益以及净收益。当前程序仅支持从程序运行开始对直播间礼物情况进行监测，监测稳定情况视运行者及直播间网络条件而定。
 
-本程序源文件为python代码，使用bilibili_api数据库，该数据库要求版本python<3.14. 程序开发时使用python 3.13.4，测试稳定版为python 3.11.4.
+本程序源文件为python代码，使用bilibili_api数据库，该数据库要求版本**python<3.14**. 程序开发时使用python 3.13.4，测试稳定版为python 3.11.4.
 
 程序源文件代码中固定ROOM_ID=27885573，若需监测其他直播间，请修改源码并重新生成exe文件。pyinstaller指令为：
 
 ```
-pyinstaller --clean -D -w --hidden-import="httpx" --hidden-import="aiohttp" --collect-all httpx --collect-all bilibili_api collector9.py
+pyinstaller --clean --onefile --hidden-import="httpx" --hidden-import="aiohttp" --collect-all httpx --collect-all bilibili_api collector10.py
 ```
 
-受bilibili_api包体限制，无法使用pyinstaller -F生成单独exe文件运行，请务必使用pyinstaller -D生成exe文件本体及附加文件。
+受bilibili_api包体限制，无法使用pyinstaller -F生成单独可执行文件运行，请务必使用pyinstaller -onefile生成单体可执行文件，或者使用pyinstaller -D生成可执行文件本体及附加文件。
 
 本工具测试信息来源于B站用户“晚安卡米宝宝” (UID: 1224551233)，测试直播间为：
 
@@ -21,8 +21,9 @@ pyinstaller --clean -D -w --hidden-import="httpx" --hidden-import="aiohttp" --co
 - 8618005：凉哈皮
 - 3546569288714792：果宝Official
 - 57863910：王者荣耀
-- 50329118：哔哩哔哩英雄联盟赛事（短号6）
+- 6：哔哩哔哩英雄联盟赛事
 - 25614477：年锦i
+- 1718743366：泰山之巅-公会争霸赛
 
 ## Apr 20
 
@@ -36,12 +37,21 @@ pyinstaller --clean -D -w --hidden-import="httpx" --hidden-import="aiohttp" --co
 
 对程序的内存占用、CPU占用进行了优化。
 
+更新：collector_sim_v2.exe
+
+设计了一个用户抽取心动盲盒一定亏损的模拟器，具体算法为：
+
+- 概率已被修改为动态概率，不再依赖给定概率；
+- 监控用户实时cost与profit. 如果profit < cost*0.8，则下一抽必定出最低价值奖品；
+- 对profit>1000的奖品，设定99.9%的转换为最低价值奖品的概率；
+
+
 ## Apr 19
 
 共两个exe文件：
 
 - collectors9.exe: 直播间盲盒统计
-- collectors_sim.exe: 模拟心动盲盒抽取
+- collector_sim.exe: 模拟心动盲盒抽取
 
 直接运行collectors9.exe即可。请注意，该程序若重启所有统计数据都将归零。
 
