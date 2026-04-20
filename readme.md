@@ -38,3 +38,75 @@ bilibili的礼物信息分为两类：SEND_GIFT和COMBO_SEND. 部分日志具有
 - log_box_first_try.txt: 盲盒类礼物单击combo第一次送出，或仅送出一次
 - log_box_multiple.txt: 盲盒类礼物批量送出
 
+除log_last_try为COMBO_SEND以外，其余均为SEND_GIFT. 可见，COMBO_SEND只有在单击combo结束后才会触发。
+
+通过blind_gift这个键，实现盲盒礼物与非盲盒礼物的区分。盲盒礼物爆出礼物的信息作为gift，原盲盒信息作为blind_gift. 盲盒礼物与爆出礼物作为同一条信息发送。
+
+自定义监听函数：
+
+```python
+@room.on('SEND_GIFT')
+async def on_gift(event):
+    data = event['data']
+```
+
+获取到的数据为一个字典，详见各个相关日志。下面列出不同情况下字典中部分k, v值的变化：
+
+1. log_first_try:
+   
+```
+"cmd": "SEND_GIFT"
+"data" -> batch_combo_send -> gift_num
+                           -> blind_gift: null
+       -> giftId
+       -> giftName
+       -> is_first: true
+       -> combo_total_coin
+       -> sender_uinfo -> base -> name
+                       -> uid
+```
+
+2. log_second_try:
+   
+```
+"cmd": "SEND_GIFT"
+"data" -> batch_combo_send: null
+       -> giftId
+       -> giftName
+       -> is_first: false
+       -> combo_total_coin
+       -> sender_uinfo -> base -> name
+                       -> uid
+```
+
+3. log_multiple:
+
+```
+"cmd": "SEND_GIFT"
+"data" -> batch_combo_send -> gift_num
+                           -> blind_gift: null
+       -> giftId
+       -> giftName
+       -> is_first: true
+       -> combo_total_coin
+       -> sender_uinfo -> base -> name
+                       -> uid
+```
+
+4. log_box_first_try:
+
+```
+"cmd": "SEND_GIFT"
+"data" -> batch_combo_send -> gift_num
+                           -> blind_gift -> gift_tip_price
+                                         -> original_gift_id
+                                         -> original_gift_name
+                                         -> original_gift_price
+       -> giftId
+       -> giftName
+       -> is_first: true
+       -> combo_total_coin
+       -> sender_uinfo -> base -> name
+                       -> uid
+```
+
