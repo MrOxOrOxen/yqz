@@ -135,7 +135,7 @@ def run_bili():
 
 if __name__ == "__main__":
     # 启动 B 站数据监听线程
-    t = Thread(target=run_bili, daemon=True)
+    t = Thread(target=run_bili, daemon=False)
     t.start()
     
     # 启动 UI 界面

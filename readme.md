@@ -17,18 +17,24 @@ pyinstaller --clean -D -w --hidden-import="httpx" --hidden-import="aiohttp" --co
 - 27885573：云崎早_haya
 - 503308916：千秋斋主
 - 672342685：乃琳Queen
-- 12939237：有棵里里
 - 7735318：Weibo-回忆
 - 8618005：凉哈皮
 - 3546569288714792：果宝Official
 - 57863910：王者荣耀
 - 50329118：哔哩哔哩英雄联盟赛事（短号6）
+- 25614477：年锦i
 
-## Apr 20 8:29AM
+## Apr 20
 
-由于bilibili_api需要动态监测运行库，pyinstaller -F并不可行。使用pyinstaller -D重新构建程序。
+更新：collector10.exe
 
-优化代码部分细节。
+由于bilibili_api需要动态监测运行库，pyinstaller -F并不可行。使用pyinstaller --onefile重新构建程序。
+
+对网络连接状态进行可视化优化；
+
+强制让aiohttp跳过SSL证书验证以便在虚拟机上运行，验证程序效果；
+
+对程序的内存占用、CPU占用进行了优化。
 
 ## Apr 19
 
