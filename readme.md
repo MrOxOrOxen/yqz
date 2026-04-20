@@ -1,4 +1,14 @@
-# 哔哩哔哩直播盲盒盈亏监测工具
+# 哔哩哔哩直播盲盒监测工具
+
+本工具只能本地运行。通过监测直播间礼物情况，提取并统计出各类盲盒成本、收益以及净收益。当前程序仅支持从程序运行开始对直播间礼物情况进行监测，监测稳定情况视运行者及直播间网络条件而定。
+
+本程序源文件为python代码，使用bilibili_api数据库，该数据库要求版本python<3.14. 程序开发时使用python 3.13.4，测试稳定版为python 3.11.4.
+
+程序源文件代码中固定ROOM_ID=27885573，若需监测其他直播间，请修改源码并重新生成exe文件。pyinstaller指令为：
+
+```
+pyinstaller --clean -D -w --hidden-import="httpx" --hidden-import="aiohttp" --collect-all httpx --collect-all bilibili_api collector9.py
+```
 
 本工具测试信息来源于B站用户“晚安卡米宝宝” (UID: 1224551233)，测试直播间为：
 
