@@ -1,109 +1,166 @@
+from bilibili_api import live, sync, Credential
+import json, time, os, sys, ssl
 import asyncio
 import aiohttp
-import http.cookies
-import blivedm
-import blivedm.models.web as web_models
+import json
+import sys
+from pathlib import Path
+sys.path.append(r"D:\\")
 
-# --- 配置区域 ---
-temp_room_id = int(input("直播间号："))
-SESSDATA = '5ac9aa87%2C1792152691%2C75543%2A41CjBwHGBGtDEKlrUs5MUqxrgvvYJOjyEhylO6EOOvUsJy_usU84eL81E4fDNEPbxQIewSVmktSTJDMGNmVjlaamRtVExDeXA4aUpOWUotY2s0NzNXMG0xeWxSM2ZFOUFkOGluaFB3eDVoYXRJa2lGdzZmbGEzN1d5aGppU2lyaVpRT3Rob21mLWJBIIEC'
-BILI_JCT = '6fd4fd7a74df714b7712181ccbd0119a'  # 在浏览器Cookie中找
-ROOM_ID = temp_room_id     # 你的直播间ID
+from data import SESSDATA, BILI_JCT, BUVID3
 
-# 用于存储所有用户的统计数据 {uid: {"uname": "", "count": 0, "cost": 0, "profit": 0}}
+credential = Credential(sessdata=SESSDATA, bili_jct=BILI_JCT)
+
+def patch_ssl():
+    """防止部分环境下 SSL 握手失败"""
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    orig_init = aiohttp.TCPConnector.__init__
+    def new_init(self, *args, **kwargs):
+        kwargs['ssl'] = ssl_context
+        orig_init(self, *args, **kwargs)
+    aiohttp.TCPConnector.__init__ = new_init
+
+patch_ssl()
+
+# 初始化配置
+temp_room_id = input("请输入直播间号：")
+ROOM_ID = int(temp_room_id)
+
+# 数据存储：{uid: {"uname": "", "count": 0, "cost": 0, "profit": 0}}
 user_stats = {}
+combo_tracker = {}
 
-class MyHandler(blivedm.BaseHandler):
-    def __init__(self, session):
-        super().__init__()
-        self.session = session
+STATS_FILE = "user_stats.json"
+def load_data():
+    """程序启动时读取旧数据"""
+    if os.path.exists(STATS_FILE):
+        with open(STATS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
 
-    async def _on_gift(self, client: blivedm.BLiveClient, message: web_models.GiftMessage):
-        global user_stats
+def save_data():
+    """每次数据更新后写入文件"""
+    with open(STATS_FILE, "w", encoding="utf-8") as f:
+        json.dump(user_stats, f, ensure_ascii=False, indent=4)
+
+user_stats = load_data()
+
+def handle_logic(uid, uname, bg_name, bg_num, bg_price, g_value):
+    """处理盲盒统计逻辑"""
+    global user_stats
+    uid_str = str(uid) # 统一转成字符串
+    bg_name = str(bg_name) if bg_name is not None else ""
+    
+    if "盲盒" in bg_name: 
+        if uid_str not in user_stats:
+            # 修正点：这里必须也用 uid_str
+            user_stats[uid_str] = {"uname": uname, "count": 0, "cost": 0, "profit": 0}
         
-        # 匹配盲盒礼物
-        if "盲盒" in message.gift_name:
-            uid = message.uid
-            if uid not in user_stats:
-                user_stats[uid] = {"uname": message.uname, "count": 0, "cost": 0, "profit": 0}
-            
-            num = message.num
-            # 1. 统计成本：price通常是金瓜子，/100 换算为常用单位（根据你之前 collector11 乘以10的逻辑调整）
-            cost = (message.price / 100) * num
-            
-            # 2. 统计收益：尝试从原始数据抓取盲盒中出的“电池”价值
-            # blivedm会将原始数据存在 message.raw_data 中
-            gift_tip_price = 0
-            try:
-                # 某些版本或特定盲盒，中奖金额在 raw_data 的 data 字段里
-                gift_tip_price = message.raw_data.get('data', {}).get('gift_tip_price', 0) / 100
-            except:
-                pass
+        user_stats[uid_str]["count"] += bg_num
+        user_stats[uid_str]["cost"] += bg_price * bg_num
+        user_stats[uid_str]["profit"] += g_value * bg_num
+        
+        save_data() # 实时保存
+        # 修正点：这里的索引也统一用 uid_str
+        print(f"[统计] {uname} 开盒x{bg_num} | 个人总消耗: {user_stats[uid_str]['cost']*10:.0f}电池")
 
-            user_stats[uid]["count"] += num
-            user_stats[uid]["cost"] += cost
-            user_stats[uid]["profit"] += gift_tip_price * num # 累加中奖价值
-
-            print(f"统计更新：{message.uname} 开盒x{num}，消耗:{cost}，中奖:{gift_tip_price * num}")
-
-    async def _on_danmaku(self, client: blivedm.BLiveClient, message: web_models.DanmakuMessage):
-        # 增加判断，防止机器人自言自语（如果SESSDATA是你自己的号）
-        if message.msg == "查盲盒":
-            uid = message.uid
-            if uid in user_stats:
-                data = user_stats[uid]
-                net = data["profit"] - data["cost"]
-                # 格式化回复，保留0位小数更直观
-                reply = (f"@{message.uname} 您已开{data['count']}盒，"
-                         f"消耗{data['cost']:.0f}电池，"
-                         f"当前净收益:{net:.0f}电池")
-            else:
-                reply = f"@{message.uname} 您目前没有统计记录哦"
-            
-            await self.send_reply(client.room_id, reply)
-
-    async def send_reply(self, room_id, content):
-        url = "https://api.live.bilibili.com/msg/send"
-        # 随机rnd防止被判重复消息
-        import random
-        data = {
-            "msg": content,
-            "roomid": room_id,
-            "csrf": BILI_JCT,
-            "csrf_token": BILI_JCT,
-            "rnd": str(random.randint(100000, 999999))
-        }
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Referer": f"https://live.bilibili.com/{room_id}"
-        }
-        try:
-            async with self.session.post(url, data=data, headers=headers) as resp:
+async def send_reply(room_id, content):
+    """通过 API 发送弹幕回复"""
+    url = "https://api.live.bilibili.com/msg/send"
+    payload = {
+        "bubble": "0",
+        "msg": content,
+        "color": "16777215",
+        "mode": "1",
+        "fontsize": "25",
+        "rnd": int(time.time()),
+        "roomid": room_id,
+        "csrf": BILI_JCT,
+        "csrf_token": BILI_JCT
+    }
+    headers = {
+        "Cookie": f"SESSDATA={SESSDATA}; bili_jct={BILI_JCT}; buvid3={BUVID3}",
+        "Origin": "https://live.bilibili.com",
+        "Referer": f"https://live.bilibili.com/{room_id}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=payload, headers=headers) as resp:
                 res = await resp.json()
                 if res['code'] == 0:
-                    print(f"成功回复：{content}")
+                    print(f">>> 成功回复：{content}")
                 else:
-                    print(f"回复失败：{res['message']}")
-        except Exception as e:
-            print(f"网络异常：{e}")
+                    print(f"!!! 回复失败：{res['message']}")
+    except Exception as e:
+        print(f"!!! 网络请求异常：{e}")
 
-# 在 main 函数里创建 session 时建议加上：
-# async with aiohttp.ClientSession(headers={'Accept-Encoding': 'gzip, deflate'}) as session:
+# 初始化直播间监听
+room = live.LiveDanmaku(ROOM_ID, credential=credential)
 
-async def main():
-    cookies = http.cookies.SimpleCookie()
-    cookies['SESSDATA'] = SESSDATA
-    cookies['bili_jct'] = BILI_JCT
+@room.on('SEND_GIFT')
+async def on_gift(event):
+    """处理送礼事件"""
+    data = event['data']['data']
+    uid = data.get('uid')
+    uname = data.get('sender_uinfo', {}).get('base', {}).get('name', '用户')
+    num = data.get('num', 1)
+    batch_id = data.get('batch_combo_id')
 
-    async with aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar()) as session:
-        session.cookie_jar.update_cookies(cookies)
-        client = blivedm.BLiveClient(ROOM_ID, session=session)
-        client.set_handler(MyHandler(session))
-        client.start()
-        try:
-            await client.join()
-        finally:
-            await client.stop_and_close()
+    if batch_id:
+        combo_tracker[batch_id] = combo_tracker.get(batch_id, 0) + num
+    
+    blind_data = data.get('blind_gift') or (data.get('batch_combo_send') and data['batch_combo_send'].get('blind_gift'))
+    
+    if blind_data:
+        bg_name = blind_data.get('original_gift_name')
+        # 换算单位：金瓜子/1000 = 电池
+        bg_price = blind_data.get('original_gift_price', 0) / 1000 
+        g_value = blind_data.get('gift_tip_price', 0) / 1000 
+        handle_logic(uid, uname, bg_name, num, bg_price, g_value)
 
-if __name__ == '__main__':
-    asyncio.run(main())
+@room.on('DANMU_MSG')
+async def on_danmaku(event):
+    """处理弹幕指令"""
+    data = event['data']['info']
+    # print(event)
+    msg = data[1]       # 弹幕内容
+    uid_str = str(data[2][0])   # 发送者UID
+    uname = data[2][1]  # 发送者用户名
+
+    if msg == "呼叫盲盒姬":
+        print(f"[指令] {uname} 请求查询数据")
+        if uid_str in user_stats:
+            stats = user_stats[uid_str]
+            # 换算成电池展示（*10）
+            cost_val = stats['cost'] * 10
+            profit_val = stats['profit'] * 10
+            net_val = profit_val - cost_val
+            
+            reply = (f"[盲盒姬] {uname}已抽取{stats['count']}个盲盒，"
+                     f"净收益{net_val:.0f}电池！")
+            
+        else:
+            reply = f"[盲盒姬] {uname}今天还没有开过盲盒哦"
+        
+        await send_reply(ROOM_ID, reply)
+
+@room.on('COMBO_SEND')
+async def on_combo(event):
+    """处理连击结束逻辑"""
+    data = event['data']['data']
+    batch_id = data.get('batch_combo_id')
+    if batch_id in combo_tracker:
+        del combo_tracker[batch_id]
+
+if __name__ == "__main__":
+    print(f"正在连接到直播间 [{ROOM_ID}]...")
+    try:
+        sync(room.connect())
+    except KeyboardInterrupt:
+        print("\n程序已手动停止")
+        os._exit(0)
+    except Exception as e:
+        print(f"连接意外中断: {e}")
