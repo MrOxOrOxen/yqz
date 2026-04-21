@@ -7,8 +7,10 @@
 程序源文件代码中可自定义直播间房间号，若有修改代码需求，请修改源码并重新生成exe文件。pyinstaller指令为：
 
 ```
-pyinstaller --clean --onefile --hidden-import="httpx" --hidden-import="aiohttp" --collect-all httpx --collect-all bilibili_api collector10.py
+pyinstaller --clean --onefile --hidden-import="httpx" --hidden-import="aiohttp" --collect-all httpx --collect-all bilibili_api collector11.py
 ```
+
+请将命令最后的python文件替换为实际的python文件名称。
 
 受bilibili_api包体限制，无法使用pyinstaller -F生成单独可执行文件运行，请务必使用pyinstaller --onefile生成单体可执行文件，或者使用pyinstaller -D生成可执行文件本体及附加文件。
 
