@@ -97,7 +97,7 @@ class App:
 
         # 第二行：主要数值区域（净收益）
         self.label_net = tk.Label(self.root, text="0", font=self.font_net_val, bg='#ffffff')
-        self.label_net_hint = tk.Label(self.root, text="当前预计净收益 (电池)", font=self.font_label, bg='#ffffff', fg='#999999')
+        self.label_net_hint = tk.Label(self.root, text="净收益 (电池)", font=self.font_label, bg='#ffffff', fg='#999999')
 
         # 分割线
         self.line = tk.Frame(self.root, height=1, width=320, bg='#eeeeee')
