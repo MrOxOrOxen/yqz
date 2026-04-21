@@ -78,37 +78,31 @@ class App:
         self.root = root
         self.root.title("云宝的盲盒统计")
         self.root.attributes("-topmost", True)
-        self.root.geometry("380x260")
+        self.root.geometry("300x230")
         self.root.configure(bg='#ffffff')
 
-        # 字体设置
-        self.main_font_name = "Microsoft Yahei UI" # 华文楷体
+        self.main_font_name = "Microsoft Yahei UI"
         self.num_font_name = "Consolas" 
         
         self.font_title = (self.main_font_name, 20, "bold")
         self.font_net_val = (self.num_font_name, 24, "bold")
         self.font_label = (self.main_font_name, 10)
         self.font_sub_val = (self.num_font_name, 14, "bold")
-        self.font_connecting = (self.main_font_name, 14) # 缩小连接中的字体
+        self.font_connecting = (self.main_font_name, 14)
 
-        # 第一行：标题
         self.title_label = tk.Label(self.root, text="云宝的盲盒统计", font=self.font_title, bg='#ffffff', fg='#fb7299')
         self.title_label.pack(pady=(15, 5))
 
-        # 第二行：主要数值区域（净收益）
         self.label_net = tk.Label(self.root, text="0", font=self.font_net_val, bg='#ffffff')
         self.label_net_hint = tk.Label(self.root, text="净收益 (电池)", font=self.font_label, bg='#ffffff', fg='#999999')
 
-        # 分割线
         self.line = tk.Frame(self.root, height=1, width=320, bg='#eeeeee')
 
-        # 第三行：三列布局
         self.stats_frame = tk.Frame(self.root, bg='#ffffff')
         self.col_count = self._create_stat_col(self.stats_frame, "盲盒总数", "#666666", 0)
         self.col_cost = self._create_stat_col(self.stats_frame, "送出电池", "#666666", 1)
         self.col_profit = self._create_stat_col(self.stats_frame, "收到电池", "#666666", 2)
         
-        # 连接状态提示文字
         self.conn_label = tk.Label(self.root, text="正在建立连接...", font=self.font_connecting, bg='#ffffff', fg='#000000')
         
         self.update_ui()
@@ -126,17 +120,14 @@ class App:
     def update_ui(self):
         global IS_CONNECTED
         if IS_CONNECTED:
-            # 隐藏连接提示
             self.conn_label.pack_forget()
             
-            # 显示正常 UI
             self.title_label.config(fg='#fb7299') 
             self.label_net.pack()
             self.label_net_hint.pack(pady=(0, 10))
             self.line.pack()
             self.stats_frame.pack(fill='x', pady=15)
             
-            # 更新数据
             cost_val = total_cost * 10
             profit_val = total_profit * 10
             net_val = profit_val - cost_val
@@ -147,15 +138,13 @@ class App:
             self.col_cost.config(text=f"{cost_val:.0f}")
             self.col_profit.config(text=f"{profit_val:.0f}")
         else:
-            # 隐藏所有统计 UI
             self.label_net.pack_forget()
             self.label_net_hint.pack_forget()
             self.line.pack_forget()
             self.stats_frame.pack_forget()
             
-            # 只显示标题和缩小的连接提示
             self.title_label.config(fg='#ff0000')
-            self.conn_label.pack(pady=40) # 增加边距使其居中感更强
+            self.conn_label.pack(pady=40)
 
         self.root.after(1000, self.update_ui)
 
