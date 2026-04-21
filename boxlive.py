@@ -24,11 +24,9 @@ def patch_ssl():
 
 patch_ssl()
 
-# 初始化配置
 temp_room_id = input("请输入直播间号：")
 ROOM_ID = int(temp_room_id)
 
-# 数据存储：{uid: {"uname": "", "count": 0, "cost": 0, "profit": 0}}
 user_stats = {}
 combo_tracker = {}
 
@@ -50,20 +48,18 @@ user_stats = load_data()
 def handle_logic(uid, uname, bg_name, bg_num, bg_price, g_value):
     """处理盲盒统计逻辑"""
     global user_stats
-    uid_str = str(uid) # 统一转成字符串
+    uid_str = str(uid)
     bg_name = str(bg_name) if bg_name is not None else ""
     
     if "盲盒" in bg_name: 
         if uid_str not in user_stats:
-            # 修正点：这里必须也用 uid_str
             user_stats[uid_str] = {"uname": uname, "count": 0, "cost": 0, "profit": 0}
         
         user_stats[uid_str]["count"] += bg_num
         user_stats[uid_str]["cost"] += bg_price * bg_num
         user_stats[uid_str]["profit"] += g_value * bg_num
         
-        save_data() # 实时保存
-        # 修正点：这里的索引也统一用 uid_str
+        save_data()
         print(f"[统计] {uname} 开盒x{bg_num} | 个人总消耗: {user_stats[uid_str]['cost']*10:.0f}电池")
 
 async def send_reply(room_id, content):
@@ -97,7 +93,6 @@ async def send_reply(room_id, content):
     except Exception as e:
         print(f"!!! 网络请求异常：{e}")
 
-# 初始化直播间监听
 room = live.LiveDanmaku(ROOM_ID, credential=credential)
 
 @room.on('SEND_GIFT')
@@ -116,7 +111,6 @@ async def on_gift(event):
     
     if blind_data:
         bg_name = blind_data.get('original_gift_name')
-        # 换算单位：金瓜子/1000 = 电池
         bg_price = blind_data.get('original_gift_price', 0) / 1000 
         g_value = blind_data.get('gift_tip_price', 0) / 1000 
         handle_logic(uid, uname, bg_name, num, bg_price, g_value)
@@ -126,15 +120,14 @@ async def on_danmaku(event):
     """处理弹幕指令"""
     data = event['data']['info']
     # print(event)
-    msg = data[1]       # 弹幕内容
-    uid_str = str(data[2][0])   # 发送者UID
-    uname = data[2][1]  # 发送者用户名
+    msg = data[1]
+    uid_str = str(data[2][0])
+    uname = data[2][1]
 
     if msg == "呼叫盲盒姬":
         print(f"[指令] {uname} 请求查询数据")
         if uid_str in user_stats:
             stats = user_stats[uid_str]
-            # 换算成电池展示（*10）
             cost_val = stats['cost'] * 10
             profit_val = stats['profit'] * 10
             net_val = profit_val - cost_val

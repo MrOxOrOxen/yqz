@@ -1,9 +1,8 @@
 from bilibili_api import live, sync, Credential
 import asyncio
 
-# --- 请务必正确填写这两个值 ---
-SESSDATA = '5ac9aa87%2C1792152691%2C75543%2A41CjBwHGBGtDEKlrUs5MUqxrgvvYJOjyEhylO6EOOvUsJy_usU84eL81E4fDNEPbxQIewSVmktSTJDMGNmVjlaamRtVExDeXA4aUpOWUotY2s0NzNXMG0xeWxSM2ZFOUFkOGluaFB3eDVoYXRJa2lGdzZmbGEzN1d5aGppU2lyaVpRT3Rob21mLWJBIIEC'
-BILI_JCT = '6fd4fd7a74df714b7712181ccbd0119a'
+SESSDATA = ''
+BILI_JCT = ''
 
 # 初始化凭据
 credential = Credential(sessdata=SESSDATA, bili_jct=BILI_JCT)
@@ -15,7 +14,6 @@ room = live.LiveDanmaku(ROOM_ID, credential=credential)
 async def on_danmaku(event):
     info = event['data']['info']
     
-    # 这里的索引是 B 站最原始的结构
     raw_uid = info[2][0]
     raw_uname = info[2][1]
     msg = info[1]
@@ -31,7 +29,6 @@ async def on_danmaku(event):
         print("状态: 【成功】已抓取到真实 UID！")
 
 async def main():
-    # 验证 Cookie 是否有效
     is_login = await credential.check_valid()
     if is_login:
         print(f"验证结果: Cookie 有效，正在连接直播间...")
