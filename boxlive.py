@@ -11,6 +11,9 @@ from data import SESSDATA, BILI_JCT, BUVID3
 
 credential = Credential(sessdata=SESSDATA, bili_jct=BILI_JCT)
 
+last_query_time = {}
+last_global_reply = 0
+
 def patch_ssl():
     """防止部分环境下 SSL 握手失败"""
     ssl_context = ssl.create_default_context()
@@ -62,7 +65,7 @@ def handle_logic(uid, uname, bg_name, bg_num, bg_price, g_value):
         save_data()
         print(f"[统计] {uname} 开盒x{bg_num} | 个人总消耗: {user_stats[uid_str]['cost']*10:.0f}电池")
 
-async def send_reply(room_id, content):
+async def send_reply(room_id, content, reply_uid=None):
     """通过 API 发送弹幕回复"""
     url = "https://api.live.bilibili.com/msg/send"
     payload = {
@@ -76,6 +79,26 @@ async def send_reply(room_id, content):
         "csrf": BILI_JCT,
         "csrf_token": BILI_JCT
     }
+
+    if reply_uid:
+        payload["reply_mid"] = reply_uid
+        payload["reply_attr"] = 0
+
+    headers = {
+        "Cookie": f"SESSDATA={SESSDATA}; bili_jct={BILI_JCT}; buvid3={BUVID3}",
+        "Origin": "https://live.bilibili.com",
+        "Referer": f"https://live.bilibili.com/{room_id}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=payload, headers=headers) as resp:
+                res = await resp.json()
+
+    except:
+        pass
+
     headers = {
         "Cookie": f"SESSDATA={SESSDATA}; bili_jct={BILI_JCT}; buvid3={BUVID3}",
         "Origin": "https://live.bilibili.com",
@@ -117,14 +140,29 @@ async def on_gift(event):
 
 @room.on('DANMU_MSG')
 async def on_danmaku(event):
+    global last_global_reply, last_query_time
     """处理弹幕指令"""
     data = event['data']['info']
     # print(event)
     msg = data[1]
     uid_str = str(data[2][0])
     uname = data[2][1]
+    raw_uid = data[2][0]
 
     if msg == "呼叫盲盒姬":
+        current_time = time.time()
+
+        
+        if uid_str in last_query_time:
+            if current_time - last_query_time[uid_str] < 10:
+                print(f"[拒绝] {uname} 查询太快，已拦截")
+                return
+            
+        if current_time - last_global_reply < 3:
+            print(f"[拒绝] 全局回复过快，暂不回复 {uname}")
+            return
+        
+            
         print(f"[指令] {uname} 请求查询数据")
         if uid_str in user_stats:
             stats = user_stats[uid_str]
@@ -132,13 +170,16 @@ async def on_danmaku(event):
             profit_val = stats['profit'] * 10
             net_val = profit_val - cost_val
             
-            reply = (f"[盲盒姬] {uname}已抽取{stats['count']}个盲盒，"
+            reply = (f"[盲盒姬] {uname}老师已抽取{stats['count']}个盲盒，"
                      f"净收益{net_val:.0f}电池！")
             
         else:
-            reply = f"[盲盒姬] {uname}今天还没有开过盲盒哦"
+            reply = f"[盲盒姬] {uname}老师今天还没有开过盲盒哦"
+
+        last_query_time[uid_str] = current_time
+        last_global_reply = current_time
         
-        await send_reply(ROOM_ID, reply)
+        await send_reply(ROOM_ID, reply, reply_uid=raw_uid)
 
 @room.on('COMBO_SEND')
 async def on_combo(event):
