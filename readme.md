@@ -24,6 +24,12 @@ pyinstaller --clean --onefile --hidden-import="httpx" --hidden-import="aiohttp" 
 - 6：哔哩哔哩英雄联盟赛事
 - 25614477：年锦i
 - 1718743366：泰山之巅-公会争霸赛
+- 
+## Apr 21
+
+**更新：collector11.exe**
+
+更新了ui界面。
 
 ## Apr 20
 
