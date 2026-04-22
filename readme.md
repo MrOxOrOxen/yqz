@@ -11,4 +11,4 @@
 
 在以上两个程序中，需要SESSDATA与BILI_JCT两个参数。该参数可以在已登录bilibili账号的浏览器中获取。**请注意，公开该参数会导致bilibili账号无需密码即可直接登录，请不要向任何人透露以上参数！**
 
-boxlive.py中，SESSDATA与BILI_JCT通过其他存储位置的data.py文件获取，设定的触发词为"呼叫弹幕姬"。
+boxlive.py中，SESSDATA与BILI_JCT通过其他存储位置的data.py文件获取，设定的触发词为"呼叫盲盒姬"。
