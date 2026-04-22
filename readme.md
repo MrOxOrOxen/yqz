@@ -12,7 +12,9 @@ gift_ledger.json可被后续程序处理以便发布在网页。后续处理步�
 
 更新：boxlive_v2.py
 
-该程序在boxlive.py的基础上，添加了直播间所有礼物的电池数统计。与boxlive.py仅监听bilibili_api的DANMU_MSG和SEND_GIFT不同，该版本还需监听SUPER_CHAT_MESSAGE和GUARD_BUY，即SC和大航海，从而统计电池送出数量。单击combo的COMBO_SEND无需监听。
+该程序在boxlive.py的基础上，添加了直播间所有礼物的电池数统计。
+
+与boxlive.py仅监听bilibili_api的DANMU_MSG和SEND_GIFT不同，该版本还需监听SUPER_CHAT_MESSAGE和GUARD_BUY，即SC和大航海，从而统计电池送出数量。单击combo的COMBO_SEND无需监听。
 
 更新：boxlive_analyse.py
 
