@@ -33,6 +33,8 @@ pyinstaller --clean --onefile --hidden-import="httpx" --hidden-import="aiohttp" 
 
 更新了ui界面。
 
+演示视频：[BV1JKdDB2ECQ](https://www.bilibili.com/video/BV1JKdDB2ECQ)
+
 ## Apr 20
 
 **更新：collector10.exe**
@@ -44,6 +46,8 @@ pyinstaller --clean --onefile --hidden-import="httpx" --hidden-import="aiohttp" 
 强制让aiohttp跳过SSL证书验证以便在虚拟机上运行，验证程序效果；
 
 对程序的内存占用、CPU占用进行了优化。
+
+演示视频：[BV19tdCBEE4B](https://www.bilibili.com/video/BV19tdCBEE4B)
 
 **更新：collector_sim_v2.exe**
 
