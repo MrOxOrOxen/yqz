@@ -181,10 +181,15 @@ async def send_reply(room_id, content, reply_uid=None):
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, data=payload, headers=headers):
-                pass
-    except:
-        pass
+            async with session.post(url, data=payload, headers=headers) as resp:
+                res = await resp.json()
+                if res.get("code") != 0:
+                    add_log(f"弹幕发送失败！原因: {res.get('message')} (Code: {res.get('code')})")
+                else:
+                    pass
+    except Exception as e:
+        add_log(f"网络层错误: {e}")
+        # pass
 
 def get_box_reply(uid, uname):
     uid = str(uid)
