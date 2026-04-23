@@ -2,11 +2,39 @@
 
 本工具（boxlive.py）通过本地运行python程序，当直播间弹幕出现"呼叫盲盒姬"这一触发词时，自动以弹幕形式输出该用户的投喂盲盒数量、成本及净收益。所有用户的盲盒信息会被保存至user_stats.json文件。
 
-boxlive_v2.py额外添加了直播间所有礼物的电池数统计功能。各个用户送出的电池数量及礼物详细信息会按照电池数量降序排列，整理成gift_ledger.json文件。
+此外，额外添加了直播间所有礼物的电池数统计功能。各个用户送出的电池数量及礼物详细信息会按照电池数量降序排列，整理成gift.json文件。
 
-gift_ledger.json可被后续程序处理以便发布在网页。后续处理步骤请前往我的mroxoroxen.github.io仓库：[mroxoroxen.github.io](https://github.com/MrOxOrOxen/mroxoroxen.github.io).
+gift.json可被后续程序处理以便发布在网页。后续处理步骤请前往我的mroxoroxen.github.io仓库：[mroxoroxen.github.io](https://github.com/MrOxOrOxen/mroxoroxen.github.io).
+
+直播结束后，通过transfer.py处理数据，可生成盲盒统计excel文件、各个用户送出电池excel情况，以及各时间送出电池数量的柱状统计图。
 
 **请不要过于频繁地调用触发词，过于频繁的访问会直接导致程序绑定的bilibili账号被风控！**
+
+## Apr 23
+
+**更新：boxlive.py**
+
+原boxlive相关文件已被移至outdated文件夹。
+
+计划生成的json文件：
+
+- box.json: 盲盒统计，字典key为uid, uname, count, cost, profit;
+- gift.json: 个人送出电池统计，字典key为uid, uname, gift_list, profit;
+- all.json: 直播间所有电池流水统计，字典key为time, battery;
+- log.json: 仅保留最后10条信息的日志文件。
+
+由于服务器IO接口崩溃，代码中调整了所有的写入与读取逻辑，具体为：
+
+1. 仅允许在代码启动时读取一次以上json文件。
+2. 盲盒数据 (box.json) 允许实时写入；
+3. 日志数据 (log.json) 每5s写入一次；
+4. gift.json与all.json每60s写入一次。
+
+API获取数据目前设定为1min读取一次（见github.io仓库），且API只允许读取内存文件，不允许读取json文件。
+
+**更新：transfer.py**
+
+直播结束后，通过transfer.py处理数据，可生成盲盒统计excel文件、各个用户送出电池excel情况，以及各时间送出电池数量的柱状统计图。
 
 ## Apr 22
 

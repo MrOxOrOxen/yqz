@@ -1,73 +1,164 @@
-from bilibili_api import live, sync, Credential
-import json, time, os, sys, ssl
 import asyncio
-import aiohttp
+import time
 import json
-import sys
-from pathlib import Path
-sys.path.append(r"D:\\")
-
+import ssl
+import aiohttp
+import os
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from bilibili_api import live, sync, Credential
+from bilibili_api.live import LiveDanmaku
 from data import SESSDATA, BILI_JCT, BUVID3
-
 credential = Credential(sessdata=SESSDATA, bili_jct=BILI_JCT)
 
+ROOM_ID = 27885573
+
+MEMORY = {
+    "box": {},
+    "gift": {},
+    "all": []
+}
+
+LOG_BUFFER = []
 last_query_time = {}
 last_global_reply = 0
 
+last_gift_save = 0
+last_log_save = 0
+
+def load_json_files():
+    json_map = {
+        "files/box.json": ("box", MEMORY),
+        "files/gift.json": ("gift", MEMORY),
+        "files/all.json": ("all", MEMORY),
+    }
+
+    if not os.path.exists("files"):
+        os.makedirs("files")
+
+    for file_path, (key, target) in json_map.items():
+        try:
+            if os.path.exists(file_path):
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                target[key] = data
+            else:
+                pass
+        except Exception as e:
+            print(f"Error: {e}")
+
+    try:
+        log_path = "files/log.json"
+        if os.path.exists(log_path):
+            with open(log_path, "r", encoding="utf-8") as f:
+                global LOG_BUFFER
+                LOG_BUFFER = json.load(f)
+        else:
+            pass
+    except Exception as e:
+        print(f"Error: {e}")
+
+def add_log(msg):
+    global LOG_BUFFER
+    LOG_BUFFER.append({
+        "time": int(time.time()),
+        "msg": msg
+    })
+    LOG_BUFFER = LOG_BUFFER[-10:]
+    print("[LOG]", msg)
+
+def save_json(filename, data):
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+def update_gift(uid, uname, gift_name, num, battery):
+    uid = str(uid)
+
+    if uid not in MEMORY["gift"]:
+        MEMORY["gift"][uid] = {
+            "uid": int(uid),
+            "uname": uname,
+            "gift_list": {},
+            "profit": 0
+        }
+
+    user = MEMORY["gift"][uid]
+    user["uname"] = uname
+    user["profit"] += battery
+
+    if gift_name:
+        user["gift_list"][gift_name] = \
+            user["gift_list"].get(gift_name, 0) + num
+
+
+def update_box(uid, uname, count, cost_battery, profit_battery):
+    uid = str(uid)
+
+    if uid not in MEMORY["box"]:
+        MEMORY["box"][uid] = {
+            "uid": int(uid),
+            "uname": uname,
+            "count": 0,
+            "cost": 0,
+            "profit": 0
+        }
+
+    user = MEMORY["box"][uid]
+    user["uname"] = uname
+    user["count"] += count
+    user["cost"] += cost_battery
+    user["profit"] += profit_battery
+
+
+def update_all(battery):
+    MEMORY["all"].append({
+        "time": int(time.time()),
+        "battery": battery
+    })
+
+def on_gift_saved():
+    add_log("HTML refresh triggered")
+
+async def periodic_tasks():
+    global last_gift_save, last_log_save
+
+    while True:
+        now = time.time()
+
+        # gift.json
+        if now - last_gift_save > 60:
+            save_json("files/gift.json", MEMORY["gift"])
+            save_json("files/all.json", MEMORY["all"])
+            last_gift_save = now
+            add_log("gift.json saved")
+            on_gift_saved()
+
+        # log.json
+        if now - last_log_save > 5:
+            save_json("files/log.json", LOG_BUFFER)
+            last_log_save = now
+
+        await asyncio.sleep(1)
+
+# patch ssl
 def patch_ssl():
-    """防止部分环境下 SSL 握手失败"""
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
+
     orig_init = aiohttp.TCPConnector.__init__
+
     def new_init(self, *args, **kwargs):
         kwargs['ssl'] = ssl_context
         orig_init(self, *args, **kwargs)
+
     aiohttp.TCPConnector.__init__ = new_init
 
 patch_ssl()
 
-temp_room_id = input("请输入直播间号：")
-ROOM_ID = int(temp_room_id)
-
-user_stats = {}
-combo_tracker = {}
-
-STATS_FILE = "user_stats.json"
-def load_data():
-    """程序启动时读取旧数据"""
-    if os.path.exists(STATS_FILE):
-        with open(STATS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-def save_data():
-    """每次数据更新后写入文件"""
-    with open(STATS_FILE, "w", encoding="utf-8") as f:
-        json.dump(user_stats, f, ensure_ascii=False, indent=4)
-
-user_stats = load_data()
-
-def handle_logic(uid, uname, bg_name, bg_num, bg_price, g_value):
-    """处理盲盒统计逻辑"""
-    global user_stats
-    uid_str = str(uid)
-    bg_name = str(bg_name) if bg_name is not None else ""
-    
-    if "盲盒" in bg_name: 
-        if uid_str not in user_stats:
-            user_stats[uid_str] = {"uname": uname, "count": 0, "cost": 0, "profit": 0}
-        
-        user_stats[uid_str]["count"] += bg_num
-        user_stats[uid_str]["cost"] += bg_price * bg_num
-        user_stats[uid_str]["profit"] += g_value * bg_num
-        
-        save_data()
-        print(f"[统计] {uname} 开盒x{bg_num} | 个人总消耗: {user_stats[uid_str]['cost']*10:.0f}电池")
-
 async def send_reply(room_id, content, reply_uid=None):
-    """通过 API 发送弹幕回复"""
     url = "https://api.live.bilibili.com/msg/send"
+
     payload = {
         "bubble": "0",
         "msg": content,
@@ -82,119 +173,172 @@ async def send_reply(room_id, content, reply_uid=None):
 
     if reply_uid:
         payload["reply_mid"] = reply_uid
-        payload["reply_attr"] = 0
 
     headers = {
         "Cookie": f"SESSDATA={SESSDATA}; bili_jct={BILI_JCT}; buvid3={BUVID3}",
-        "Origin": "https://live.bilibili.com",
-        "Referer": f"https://live.bilibili.com/{room_id}",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        "User-Agent": "Mozilla/5.0"
     }
-    
+
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, data=payload, headers=headers) as resp:
-                res = await resp.json()
-
+            async with session.post(url, data=payload, headers=headers):
+                pass
     except:
         pass
 
-    headers = {
-        "Cookie": f"SESSDATA={SESSDATA}; bili_jct={BILI_JCT}; buvid3={BUVID3}",
-        "Origin": "https://live.bilibili.com",
-        "Referer": f"https://live.bilibili.com/{room_id}",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, data=payload, headers=headers) as resp:
-                res = await resp.json()
-                if res['code'] == 0:
-                    print(f">>> 成功回复：{content}")
-                else:
-                    print(f"!!! 回复失败：{res['message']}")
-    except Exception as e:
-        print(f"!!! 网络请求异常：{e}")
+def get_box_reply(uid, uname):
+    uid = str(uid)
+
+    if uid not in MEMORY["box"]:
+        return f"[盲盒姬] {uname}老师今天还没有开过盲盒哦"
+
+    stats = MEMORY["box"][uid]
+
+    count = stats["count"]
+    cost = stats["cost"]
+    profit = stats["profit"]
+
+    net = profit - cost
+
+    return f"[盲盒姬] {uname}老师已抽取{count}个盲盒，净收益{net:.0f}电池！"
 
 room = live.LiveDanmaku(ROOM_ID, credential=credential)
-
-@room.on('SEND_GIFT')
-async def on_gift(event):
-    """处理送礼事件"""
-    data = event['data']['data']
-    uid = data.get('uid')
-    uname = data.get('sender_uinfo', {}).get('base', {}).get('name', '用户')
-    num = data.get('num', 1)
-    batch_id = data.get('batch_combo_id')
-
-    if batch_id:
-        combo_tracker[batch_id] = combo_tracker.get(batch_id, 0) + num
-    
-    blind_data = data.get('blind_gift') or (data.get('batch_combo_send') and data['batch_combo_send'].get('blind_gift'))
-    
-    if blind_data:
-        bg_name = blind_data.get('original_gift_name')
-        bg_price = blind_data.get('original_gift_price', 0) / 1000 
-        g_value = blind_data.get('gift_tip_price', 0) / 1000 
-        handle_logic(uid, uname, bg_name, num, bg_price, g_value)
 
 @room.on('DANMU_MSG')
 async def on_danmaku(event):
     global last_global_reply, last_query_time
-    """处理弹幕指令"""
+
     data = event['data']['info']
-    # print(event)
+
     msg = data[1]
-    uid_str = str(data[2][0])
+    uid = data[2][0]
     uname = data[2][1]
-    raw_uid = data[2][0]
+
+    uid_str = str(uid)
+    now = time.time()
 
     if msg == "呼叫盲盒姬":
-        current_time = time.time()
-
-        
-        if uid_str in last_query_time:
-            if current_time - last_query_time[uid_str] < 10:
-                print(f"[拒绝] {uname} 查询太快，已拦截")
-                return
-            
-        if current_time - last_global_reply < 3:
-            print(f"[拒绝] 全局回复过快，暂不回复 {uname}")
+        if uid_str in last_query_time and now - last_query_time[uid_str] < 10:
             return
-        
-            
-        print(f"[指令] {uname} 请求查询数据")
-        if uid_str in user_stats:
-            stats = user_stats[uid_str]
-            cost_val = stats['cost'] * 10
-            profit_val = stats['profit'] * 10
-            net_val = profit_val - cost_val
-            
-            reply = (f"[盲盒姬] {uname}老师已抽取{stats['count']}个盲盒，"
-                     f"净收益{net_val:.0f}电池！")
-            
-        else:
-            reply = f"[盲盒姬] {uname}老师今天还没有开过盲盒哦"
 
-        last_query_time[uid_str] = current_time
-        last_global_reply = current_time
-        
-        await send_reply(ROOM_ID, reply, reply_uid=raw_uid)
+        if now - last_global_reply < 3:
+            return
 
-@room.on('COMBO_SEND')
-async def on_combo(event):
-    """处理连击结束逻辑"""
+        reply = get_box_reply(uid, uname)
+
+        last_query_time[uid_str] = now
+        last_global_reply = now
+
+        await send_reply(ROOM_ID, reply, reply_uid=uid)
+
+        add_log(f"[盲盒姬] 回复 {uname}")
+
+@room.on('SEND_GIFT')
+async def on_gift(event):
     data = event['data']['data']
-    batch_id = data.get('batch_combo_id')
-    if batch_id in combo_tracker:
-        del combo_tracker[batch_id]
+
+    uid = data.get('uid')
+    uname = data.get('sender_uinfo', {}).get('base', {}).get('name', '用户')
+    gift_name = data.get('giftName')
+    num = data.get('num', 1)
+
+    price_gold = data.get('price', 0)
+    
+    blind_data = data.get('blind_gift') or (
+        data.get('batch_combo_send') and data['batch_combo_send'].get('blind_gift')
+    )
+
+    if blind_data:
+        bg_cost_battery = blind_data.get('original_gift_price', 0) / 100
+        g_profit_battery = blind_data.get('gift_tip_price', 0) / 100
+        
+        update_box(uid, uname, num, bg_cost_battery * num, g_profit_battery * num)
+        save_json("files/box.json", MEMORY["box"])
+
+        update_gift(uid, uname, gift_name, num, g_profit_battery * num)
+        update_all(g_profit_battery * num)
+
+        add_log(f"[盲盒] {uname} 开启x{num}，价值 {g_profit_battery*num:.1f} 电池")
+    else:
+        battery = (price_gold * num) / 100
+        update_gift(uid, uname, gift_name, num, battery)
+        update_all(battery)
+        add_log(f"[礼物] {uname} {gift_name}x{num} ({battery:.1f} 电池)")
+
+@room.on('SUPER_CHAT_MESSAGE')
+async def on_sc(event):
+    data = event['data']['data']
+
+    uid = data.get('uid')
+    uname = data.get('user_info', {}).get('uname', '用户')
+    price = data.get('price', 0)
+
+    battery = price * 10
+
+    update_gift(uid, uname, "SuperChat", 1, battery)
+    update_all(battery)
+
+    add_log(f"[SC] {uname} ({price}元)")
+
+@room.on('GUARD_BUY')
+async def on_guard(event):
+    data = event['data']['data']
+
+    uid = data.get('uid')
+    uname = data.get('username', '用户')
+    gift_name = data.get('gift_name')
+    num = data.get('num', 1)
+    price = data.get('price', 0) / 100
+
+    update_gift(uid, uname, gift_name, num, price)
+    update_all(price)
+
+    add_log(f"[大航海] {uname} {gift_name}")
+
+# FastAPI
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/gift")
+def get_gift():
+    return MEMORY["gift"]
+
+@app.get("/box")
+def get_box():
+    return MEMORY["box"]
+
+@app.get("/all")
+def get_all():
+    return MEMORY["all"]
+
+@app.get("/log")
+def get_log():
+    return LOG_BUFFER
+
+@app.get("/data")
+def get_data():
+    return sorted(MEMORY["gift"].values(), key=lambda x: x.get('profit', 0), reverse=True)
+
+
+# main
+async def main():
+    add_log("Start")
+    load_json_files()
+
+    asyncio.create_task(periodic_tasks())
+    asyncio.create_task(room.connect())
+
+    import uvicorn
+    config = uvicorn.Config(app, host="0.0.0.0", port=8000, loop="asyncio")
+    server = uvicorn.Server(config)
+
+    await server.serve()
 
 if __name__ == "__main__":
-    print(f"正在连接到直播间 [{ROOM_ID}]...")
-    try:
-        sync(room.connect())
-    except KeyboardInterrupt:
-        print("\n程序已手动停止")
-        os._exit(0)
-    except Exception as e:
-        print(f"连接意外中断: {e}")
+    asyncio.run(main())
