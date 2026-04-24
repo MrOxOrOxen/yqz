@@ -1,18 +1,36 @@
 # 哔哩哔哩直播间弹幕互动盲盒查询工具
 
-本工具（boxlive.py）通过本地运行python程序，当直播间弹幕出现"呼叫盲盒姬"这一触发词时，自动以弹幕形式输出该用户的投喂盲盒数量、成本及净收益。所有用户的盲盒信息会被保存至user_stats.json文件。
+本工具（boxlive.py）通过本地运行python程序，当直播间弹幕出现"呼叫盲盒姬"这一触发词时，自动以弹幕形式输出该用户的投喂盲盒数量、成本及净收益。所有用户的盲盒信息会被保存至user.json文件。
 
 此外，额外添加了直播间所有礼物的电池数统计功能。各个用户送出的电池数量及礼物详细信息会按照电池数量降序排列，整理成gift.json文件。
 
 gift.json可被后续程序处理以便发布在网页。后续处理步骤请前往我的mroxoroxen.github.io仓库：[mroxoroxen.github.io](https://github.com/MrOxOrOxen/mroxoroxen.github.io).
 
-直播结束后，通过transfer.py处理数据，可生成盲盒统计excel文件、各个用户送出电池excel情况，以及各时间送出电池数量的柱状统计图。
+直播结束后，生成包含礼物时间戳及礼物电池数的all.json文件。通过transfer.py处理数据，可生成盲盒统计excel文件、各个用户送出电池excel情况，以及各时间送出电池数量的柱状统计图。
 
 **请不要过于频繁地调用触发词，过于频繁的访问会直接导致程序绑定的bilibili账号被风控！**
 
+## Apr 24
+
+**更新：boxlive_test.py**
+
+经测试，boxlive_v3.py无法准确显示大航海电池数，原因为：
+
+bilibili的GUARD_BUY接口的price键值为固定的1980, 19980, 199980，即不管用户送出大航海时有多少折扣，程序获取到的金额均为原价。
+
+为解决这一问题，引入USER_TOAST_MSG监听。该接口的price键值为用户实际支付金瓜子数量。
+
+GUARD_BUY与USER_TOAST的区别请查看log.txt.
+
+以下有关上文的网址内容供参考：
+
+- [直播弹幕](https://github.com/czp3009/bilibili-api/blob/master/record/%E7%9B%B4%E6%92%AD%E5%BC%B9%E5%B9%95)
+- [OnGuard命令可能不再可用于检测大航海](https://github.com/Akegarasu/blivedm-go/issues/7)
+- [bilibili直播插件使用方法](https://zhuanlan.zhihu.com/p/665035523)
+
 ## Apr 23
 
-**更新：boxlive.py**
+**更新：boxlive_v3.py**
 
 原boxlive相关文件已被移至outdated文件夹。
 

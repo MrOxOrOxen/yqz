@@ -20,7 +20,7 @@ os.makedirs(folder_all, exist_ok=True)
 
 # all.json
 try:
-    with open('all.json', 'r', encoding='utf-8') as f:
+    with open('files/all.json', 'r', encoding='utf-8') as f:
         all_data = json.load(f)
 
     stats = {}
@@ -32,11 +32,14 @@ try:
     times = [datetime.fromtimestamp(t) for t in sorted_keys]
     counts = [stats[t] for t in sorted_keys]
 
-    plt.figure(figsize=(15, 6))
-    plt.bar(times, counts, width=0.0006, color='#ff85c0')
+    plt.figure(figsize=(12, 6))
+    
+    # 平滑折线 + 粉色填充（核心修改处）
+    plt.plot(times, counts, color='#ff85c0', linewidth=2.5, alpha=0.9)
+    plt.fill_between(times, counts, color='#ff85c0', alpha=0.3)  # 折现下方粉色填充
 
     ax = plt.gca()
-    ax.xaxis.set_major_locator(mdates.MinuteLocator(byminute=range(0, 60, 10)))
+    ax.xaxis.set_major_locator(mdates.MinuteLocator(byminute=range(0, 60, 20)))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
     plt.title(f'{date} 云宝直播间电池统计图')
@@ -50,7 +53,7 @@ except FileNotFoundError:
 
 # gift.json
 try:
-    with open('gift.json', 'r', encoding='utf-8') as f:
+    with open('files/gift.json', 'r', encoding='utf-8') as f:
         gift_data = json.load(f)
 
     gift_list = []
@@ -90,7 +93,7 @@ except FileNotFoundError:
 
 # box.json
 try:
-    with open('box.json', 'r', encoding='utf-8') as f:
+    with open('files/box.json', 'r', encoding='utf-8') as f:
         boxlive_dict = json.load(f)
 
     user_list = []
@@ -106,17 +109,14 @@ try:
         user_list.append({
             "用户名": user_info["uname"],
             "盲盒数": count,
-            "总花费（电池）": round(cost*10),
-            "总收益（电池）": round(profit*10),
-            "净收益（电池）": round(profit*10)-round(cost*10)
+            "总花费（电池）": round(cost),
+            "总收益（电池）": round(profit),
+            "净收益（电池）": round(profit)-round(cost)
         })
         
         total_box += count
         total_cost += cost
         total_profit += profit
-
-    total_cost *= 10
-    total_profit *= 10
 
     df_box = pd.DataFrame(user_list)
     box_path = os.path.join(folder_box, f"{date}盲盒统计.xlsx")
