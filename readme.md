@@ -14,6 +14,10 @@ gift.json可被后续程序处理以便发布在网页。后续处理步骤请�
 
 **更新：boxlive_test.py**
 
+实测时遇到以下问题，均已解决：
+
+1. 大航海电池数不正确
+
 经测试，boxlive_v3.py无法准确显示大航海电池数，原因为：
 
 bilibili的GUARD_BUY接口的price键值为固定的1980, 19980, 199980，即不管用户送出大航海时有多少折扣，程序获取到的金额均为原价。
@@ -27,6 +31,26 @@ GUARD_BUY与USER_TOAST的区别请查看log.txt.
 - [直播弹幕](https://github.com/czp3009/bilibili-api/blob/master/record/%E7%9B%B4%E6%92%AD%E5%BC%B9%E5%B9%95)
 - [OnGuard命令可能不再可用于检测大航海](https://github.com/Akegarasu/blivedm-go/issues/7)
 - [bilibili直播插件使用方法](https://zhuanlan.zhihu.com/p/665035523)
+
+2. unpack requires a buffer of 16 bytes
+   
+B站的直播协议头为16字节。当直播间瞬间涌入大量礼物时，B站会将数据切片发送，导致Python的异步读取器有概率读取到8或12字节的数据，从而引发报错。
+
+解决方法：使用pm2启动，使得404 Error时程序能自动重启。
+
+3. Invalid HTTP request received
+
+代码中设定了host=0.0.0.0，会导致Bot持续扫描端口。如果Bot发送的数据不符合HTTP协议标准，就会报无效请求错误。
+
+解决方法：设定python程序只监听127.0.0.1，并使用Nginx监听80端口，将html请求转发给python程序。
+
+4. 内存数据在json文件删除后自动恢复
+
+由于内存数据被放进了全局变量MEMORY，当json文件被删除但python进程仍继续时，MEMORY依然会包含历史数据。
+
+解决方法：优化了boxlive程序中load_json_files函数的逻辑，当json文件被手动删除（即不存在）时，清除相对应的内存值，以防继续保存历史数据。
+
+
 
 ## Apr 23
 

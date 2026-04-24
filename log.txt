@@ -10,8 +10,6 @@
     "start_time": 1776959067,
     "end_time": 1776959067
 }
->>> 解析结果: 雾晴雨 上舰面值 1980.0 电池
-##############################
 
 
 ==============================
@@ -49,13 +47,3 @@
     "user_show": true,
     "username": "雾晴雨"
 }
->>> 解析结果: 雾晴雨 实付 1980.0 电池
-
-
-
-
-{'anchor_show': True, 'color': '#00D1F1', 'dmscore': 408, 'effect_id': 397, 'end_time': 1777002937, 'face_effect_id': 44, 'gift_id': 10003, 'group_name': '', 'g
-roup_op_type': 0, 'group_role_name': '', 'guard_level': 3, 'is_group': 0, 'is_show': 0, 'num': 1, 'op_type': 2, 'payflow_id': '2604241155376142150417625', 'pric
-e': 168000, 'role_name': '舰长', 'room_effect_id': 590, 'room_gift_effect_id': 0, 'room_group_effect_id': 1337, 'ship_effect_id': 590, 'source': 0, 'start_time'
-: 1777002937, 'svga_block': 0, 'target_guard_count': 88, 'toast_msg': '<%-秋莫-%> 在主播-菫時-的直播间开通了舰长，今天是TA陪伴主播的第61天', 'uid': 15225041, 'u
-nit': '月', 'user_show': True, 'username': '-秋莫-'}
