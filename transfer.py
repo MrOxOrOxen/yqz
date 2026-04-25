@@ -1,4 +1,6 @@
 import json
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from datetime import datetime
 import matplotlib.dates as mdates
@@ -6,8 +8,14 @@ import pandas as pd
 import os
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment
+import sys
 
-plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei']
+if len(sys.argv) > 1:
+    date = sys.argv[1]
+else:
+    date = datetime.now().strftime('%Y-%m-%d')
+
+plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'Microsoft YaHei', 'SimHei']
 plt.rcParams['axes.unicode_minus'] = False
 
 date = input("请输入日期 (yyyy-mm-dd): ")
