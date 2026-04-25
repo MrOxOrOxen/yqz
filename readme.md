@@ -38,6 +38,10 @@ B站的直播协议头为16字节。当直播间瞬间涌入大量礼物时，B�
 
 解决方法：使用pm2启动，使得404 Error时程序能自动重启。
 
+```
+pm2 start boxlive_test.py --interpreter python3 --name "boxlive"
+```
+
 3. Invalid HTTP request received
 
 代码中设定了host=0.0.0.0，会导致Bot持续扫描端口。如果Bot发送的数据不符合HTTP协议标准，就会报无效请求错误。
