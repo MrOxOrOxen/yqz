@@ -1,4 +1,4 @@
 analysis/
 history_files/
-download_today.bat
-download.bat
+sync.bat
+sync_today.bat
