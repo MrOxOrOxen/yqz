@@ -1,0 +1,54 @@
+0|main  | LIVE_STATUS: 1
+0|main  | [23:57:36] All json files saved
+0|main  | [23:57:36] HTML refresh triggered
+0|main  | {'uid': 2120548294, 'uname': '连环马厉害吗', 'identities': [1], 'msg_type': 1, 'room_id': 27885573, 'timestamp': 1778687882, 'score': 1778687882660, 'contribution_info': {}, 'trigger_time': 1778687881479484812, 'contribution_info_v2': {}, 'user_info': {'uid': 2120548294, 'base': {'name': '连环马厉害吗', 'face': 'https://i1.hdslb.com/bfs/face/41f3ce2abca9ef369fa55e8bad6ef24b5a8a5a01.jpg'}, 'wealth': {'level': 1}, 'guard': {}}, 'user_anchor_relation': {}}
+0|main  | LIVE_STATUS: 1
+0|main  | [23:58:06] All json files saved
+0|main  | [23:58:06] HTML refresh triggered
+0|main  | {'uid': 3706926412073321, 'uname': '春日野穹SoraOvO', 'identities': [3], 'msg_type': 1, 'room_id': 27885573, 'timestamp': 1778687888, 'score': 1778700988094, 'fans_medal_info': {'target_id': 3493074573461871, 'medal_level': 22, 'medal_name': '早崎鸭', 'medal_color': 1725515, 'medal_color_start': 1725515, 'medal_color_end': 5414290, 'medal_color_border': 6809855, 'is_lighted': 1, 'guard_level': 3, 'anchor_roomid': 27885573, 'score': 3100}, 'contribution_info': {'grade': 3}, 'trigger_time': 1778687886988212498, 'privilege_type': 3, 'contribution_info_v2': {}, 'user_info': {'uid': 3706926412073321, 'base': {'name': '春日野穹SoraOvO', 'face': 'https://i2.hdslb.com/bfs/face/09cfb626ea84c2103a601d3492717e079fd62a65.jpg', 'name_color_str': '#00D1F1'}, 'medal': {'name': '早崎鸭', 'level': 22, 'color_start': 1725515, 'color_end': 5414290, 'color_border': 6809855, 'color': 1725515, 'id': 1206782, 'is_light': 1, 'ruid': 3493074573461871, 'guard_level': 3, 'score': 3100, 'guard_icon': 'https://i0.hdslb.com/bfs/live/48360c8f3b7de8031e86ff1ef4a2dfc0ec2a61c2.png', 'v2_medal_color_start': '#3FB4F699', 'v2_medal_color_end': '#3FB4F699', 'v2_medal_color_border': '#5FC7F4', 'v2_medal_color_text': '#FFFFFF', 'v2_medal_color_level': '#3FB4F6E6'}, 'wealth': {'level': 9}, 'guard': {'level': 3, 'expired_str': '2026-06-08 23:59:59'}}, 'user_anchor_relation': {}}
+0|main  | {'uid': 410268578, 'uname': '且问风', 'identities': [1], 'msg_type': 1, 'room_id': 27885573, 'timestamp': 1778687902, 'score': 1778687902448, 'contribution_info': {}, 'trigger_time': 1778687901492168651, 'contribution_info_v2': {}, 'user_info': {'uid': 410268578, 'base': {'name': '且问风', 'face': 'http://i2.hdslb.com/bfs/face/8842f2069efd44050f4d75347979e4efa9e95cea.jpg'}, 'wealth': {'level': 2}, 'guard': {}}, 'user_anchor_relation': {}}
+0|main  | LIVE_STATUS: 1
+0|main  | [23:58:36] All json files saved
+0|main  | [23:58:36] HTML refresh triggered
+0|main  | {'uid': 3, 'uname': '庄生梦方宜', 'identities': [3], 'msg_type': 1, 'room_id': 27885573, 'timestamp': 1778687915, 'score': 1779324628617, 'fans_medal_info': {'target_id': 3493074573461871, 'medal_level': 42, 'medal_name': '早崎鸭', 'medal_color': 16736523, 'medal_color_start': 16736523, 'medal_color_end': 16765060, 'medal_color_border': 16771156, 'is_lighted': 1, 'guard_level': 1, 'anchor_roomid': 27885573, 'score': 626713}, 'contribution_info': {'grade': 1}, 'trigger_time': 1778687914539459573, 'privilege_type': 1, 'contribution_info_v2': {'grade': 1, 'rank_type': 'monthly_rank', 'text': '月榜前3用户'}, 'user_info': {'uid': 129803120, 'base': {'name': '庄生梦方宜', 'face': 'https://i2.hdslb.com/bfs/face/bcf6839aa657ece912b0493d5af75c0065760f94.jpg', 'name_color_str': '#FF7C28'}, 'medal': {'name': '早崎鸭', 'level': 42, 'color_start': 16736523, 'color_end': 16765060, 'color_border': 16771156, 'color': 16736523, 'id': 1206782, 'is_light': 1, 'ruid': 3493074573461871, 'guard_level': 1, 'score': 626713, 'guard_icon': 'https://i0.hdslb.com/bfs/live/bf4f5ea4b54ca7bb358dec4e6c4afcc300c12eb9.png', 'v2_medal_color_start': '#A773F199', 'v2_medal_color_end': '#A773F199', 'v2_medal_color_border': '#D47AFF', 'v2_medal_color_text': '#FFFFFF', 'v2_medal_color_level': '#A773F1E6'}, 'wealth': {'level': 37}, 'guard': {'level': 1, 'expired_str': '2026-06-02 23:59:59'}, 'user_head_frame': {'id': 1777, 'frame_img': 'https://i0.hdslb.com/bfs/live/39164ebfdd39db3d284b1221765e7e57f5a49958.png'}}, 'user_anchor_relation': {}}
+0|main  | [23:58:37] [欢迎姬] 欢迎庄生梦方宜
+0|main  | {'uid': 107441326, 'uname': '忆直崽京设', 'identities': [1], 'msg_type': 1, 'room_id': 27885573, 'timestamp': 1778687922, 'score': 1778687922971, 'contribution_info': {}, 'trigger_time': 1778687921933675826, 'contribution_info_v2': {}, 'user_info': {'uid': 107441326, 'base': {'name': '忆直崽京设', 'face': 'https://i1.hdslb.com/bfs/face/d233de9261bcba7bb4f4901abac8a4456d7451a3.jpg'}, 'wealth': {}, 'guard': {}}, 'user_anchor_relation': {'tail_icon': 'https://i0.hdslb.com/bfs/live/bb88734558c6383a4cfb5fa16c9749d5290d95e8.png', 'tail_guide_text': '曾经活跃过，近期与你互动较少', 'tail_type': 4}}
+0|main  | {'uid': 3546377307032023, 'uname': 'buwacx', 'identities': [1], 'msg_type': 1, 'room_id': 27885573, 'timestamp': 1778687936, 'score': 1778687936392, 'contribution_info': {}, 'trigger_time': 1778687935331098661, 'contribution_info_v2': {}, 'user_info': {'uid': 3546377307032023, 'base': {'name': 'buwacx', 'face': 'https://i0.hdslb.com/bfs/face/member/noface.jpg'}, 'wealth': {}, 'guard': {}}, 'user_anchor_relation': {}}
+0|main  | LIVE_STATUS: 1
+0|main  | [23:59:06] All json files saved
+0|main  | [23:59:06] HTML refresh triggered
+0|main  | {'uid': 413405445, 'uname': '寂空星元', 'identities': [1], 'msg_type': 1, 'room_id': 27885573, 'timestamp': 1778687955, 'score': 1778687955829, 'contribution_info': {}, 'trigger_time': 1778687954623333391, 'contribution_info_v2': {}, 'user_info': {'uid': 413405445, 'base': {'name': '寂空星元', 'face': 'https://i0.hdslb.com/bfs/face/b1109c817a3baf1519c1759f525d56ed445ae480.jpg'}, 'wealth': {}, 'guard': {}}, 'user_anchor_relation': {}}
+0|main  | LIVE_STATUS: 1
+0|main  | [23:59:36] All json files saved
+0|main  | [23:59:36] HTML refresh triggered
+0|main  | LIVE_STATUS: 1
+0|main  | [00:00:06] All json files saved
+0|main  | [00:00:06] HTML refresh triggered
+0|main  | {'uid': 32502876, 'uname': 'Plum丶L', 'identities': [1], 'msg_type': 1, 'room_id': 27885573, 'timestamp': 1778688015, 'score': 1778688015280, 'contribution_info': {}, 'trigger_time': 1778688014171160695, 'contribution_info_v2': {}, 'user_info': {'uid': 32502876, 'base': {'name': 'Plum丶L', 'face': 'http://i0.hdslb.com/bfs/face/efd3c81f250a15abd2576cbbab4fa8d601560392.jpg'}, 'wealth': {'level': 14}, 'guard': {}}, 'user_anchor_relation': {}}
+0|main  | LIVE_STATUS: 1
+0|main  | [00:00:36] All json files saved
+0|main  | [00:00:36] HTML refresh triggered
+0|main  | {'uid': 12248197, 'uname': '无颜的白鹭', 'identities': [1], 'msg_type': 1, 'room_id': 27885573, 'timestamp': 1778688039, 'score': 1778688039612, 'contribution_info': {}, 'trigger_time': 1778688038497791285, 'contribution_info_v2': {}, 'user_info': {'uid': 12248197, 'base': {'name': '无颜的白鹭', 'face': 'https://i1.hdslb.com/bfs/face/b8c7cbf9265157bed2330b6a201b4406d8370a0c.jpg'}, 'wealth': {'level': 6}, 'guard': {}}, 'user_anchor_relation': {}}
+0|main  | LIVE_STATUS: 1
+0|main  | [00:01:06] All json files saved
+0|main  | [00:01:06] HTML refresh triggered
+0|main  | {'uid': 1825327088, 'uname': '行道迟迟al', 'identities': [1], 'msg_type': 1, 'room_id': 27885573, 'timestamp': 1778688075, 'score': 1778688075651, 'contribution_info': {}, 'trigger_time': 1778688074633216814, 'contribution_info_v2': {}, 'user_info': {'uid': 1825327088, 'base': {'name': '行道迟迟al', 'face': 'https://i2.hdslb.com/bfs/face/8b3635ccf9de685af8a7187b55f89ff222a33226.jpg'}, 'wealth': {'level': 22}, 'guard': {}}, 'user_anchor_relation': {}}
+0|main  | {'uid': 443612176, 'uname': '一般路过A10C', 'identities': [1], 'msg_type': 1, 'room_id': 27885573, 'timestamp': 1778688085, 'score': 1778688085878, 'contribution_info': {}, 'trigger_time': 1778688084741292177, 'contribution_info_v2': {}, 'user_info': {'uid': 443612176, 'base': {'name': '一般路过A10C', 'face': 'https://i1.hdslb.com/bfs/face/22acfefec99f0739067c07dd5ac94540fbf44b94.jpg'}, 'wealth': {'level': 8}, 'guard': {}}, 'user_anchor_relation': {}}
+0|main  | LIVE_STATUS: 1
+0|main  | [00:01:36] All json files saved
+0|main  | [00:01:36] HTML refresh triggered
+0|main  | LIVE_STATUS: 1
+0|main  | [00:02:06] All json files saved
+0|main  | [00:02:06] HTML refresh triggered
+0|main  | {'uid': 11364359, 'uname': '虹色バス', 'identities': [1], 'msg_type': 1, 'room_id': 27885573, 'timestamp': 1778688142, 'score': 1778688142518, 'contribution_info': {}, 'trigger_time': 1778688141440759213, 'contribution_info_v2': {}, 'user_info': {'uid': 11364359, 'base': {'name': '虹色バス', 'face': 'https://i2.hdslb.com/bfs/face/d7431bc04f4849141cd2721698a0e6dc42c143a7.jpg'}, 'wealth': {'level': 13}, 'guard': {}}, 'user_anchor_relation': {}}
+0|main  | LIVE_STATUS: 1
+0|main  | [00:02:36] All json files saved
+0|main  | [00:02:36] HTML refresh triggered
+0|main  | {'uid': 3706987695049338, 'uname': 'bili_70650046276', 'identities': [1], 'msg_type': 1, 'room_id': 27885573, 'timestamp': 1778688159, 'score': 1778688159532, 'contribution_info': {}, 'trigger_time': 1778688158411045968, 'contribution_info_v2': {}, 'user_info': {'uid': 3706987695049338, 'base': {'name': 'bili_70650046276', 'face': 'https://i0.hdslb.com/bfs/face/member/noface.jpg'}, 'wealth': {}, 'guard': {}}, 'user_anchor_relation': {'tail_icon': 'https://i0.hdslb.com/bfs/live/ec67068aba00ac8eb9d0c5ff58ed0a9a38733235.png', 'tail_guide_text': '近期关注了你，多多与TA互动吧', 'tail_type': 3}}
+0|main  | LIVE_STATUS: 1
+0|main  | [00:03:06] All json files saved
+0|main  | [00:03:06] HTML refresh triggered
+0|main  | LIVE_STATUS: 1
+0|main  | [00:03:36] All json files saved
+0|main  | [00:03:36] HTML refresh triggered
+0|main  | {'uid': 302429224, 'uname': 'Minase141', 'identities': [1], 'msg_type': 1, 'room_id': 27885573, 'timestamp': 1778688238, 'score': 1778688238045, 'contribution_info': {}, 'trigger_time': 1778688236885307506, 'contribution_info_v2': {}, 'user_info': {'uid': 302429224, 'base': {'name': 'Minase141', 'face': 'https://i1.hdslb.com/bfs/face/a3a2d2373cff12a52d9361f74ac8ab908b597d4b.jpg'}, 'wealth': {'level': 5}, 'guard': {}}, 'user_anchor_relation': {}}
