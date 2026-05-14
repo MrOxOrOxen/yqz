@@ -94,8 +94,8 @@ def load_json_files():
         "files/box.json": ("box", MEMORY),
         "files/gift.json": ("gift", MEMORY),
         "files/all.json": ("all", MEMORY),
-        "files/meta.json": ("meta", MEMORY),
-        "files/audience.json": ("audience", MEMORY)
+        # "files/meta.json": ("meta", MEMORY),
+        # "files/audience.json": ("audience", MEMORY)
     }
 
     if not os.path.exists("files"):
@@ -110,6 +110,7 @@ def load_json_files():
                 data = json.load(f)
                 MEMORY["meta"]["total_battery"] = data.get("total_battery", 0)
                 # MEMORY["meta"]["total_danmu_cnt_from_start"] = data.get("total_danmu_cnt_from_start", 0)
+                MEMORY["meta"]["total_danmu_cnt_from_start"] = data.get("total_danmu_cnt_from_start", 0)
                 MEMORY["meta"]["is_loss_warning_sent"] = data.get("is_loss_warning_sent", False)
                 MEMORY["meta"]["is_whole_profit_msg_sent"] = data.get("is_whole_profit_msg_sent", False)
                 MEMORY["meta"]["next_threshold"] = data.get("next_threshold", random.randint(4000, 5000))
@@ -142,6 +143,7 @@ def load_json_files():
     else:
         interact_cache = set()
         save_json("files/audience.json", MEMORY["audience"])
+        add_log("No audience.json. Total audience starts with 0")
 
 
     for file_path, (key, target) in json_map.items():
@@ -150,6 +152,7 @@ def load_json_files():
                 with open(file_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 target[key] = data
+                add_log(f"Loaded file: {file_path}")
             else:
                 if isinstance(target[key], dict): target[key].clear()
                 elif isinstance(target[key], list): target[key][:] = []
@@ -716,7 +719,7 @@ async def periodic_tasks():
             save_json("files/meta.json", MEMORY["meta"])
             append_to_jsonl("files/danmu.jsonl", MEMORY["danmu"])
             MEMORY["meta"]["total_danmu_cnt_from_start"] += len(MEMORY["danmu"])
-            save_json("files/meta.json", MEMORY["meta"])
+            # save_json("files/meta.json", MEMORY["meta"])
             save_json("files/audience.json", MEMORY["audience"])
             MEMORY["danmu"].clear()
             last_save_time = now
