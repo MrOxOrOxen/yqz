@@ -240,7 +240,7 @@ async def gift_egg(uid, uname, gift_name, num, profit):
 
 async def sc_egg(uid, uname, battery, message):
     async def shennai(uid, message):
-        keywords = ["云购", "溜溜", "狗", "66", "遛狗", "√", "遛遛", "溜狗", "6狗", "6购"]
+        keywords = ["购", "溜", "狗", "66", "√", "遛"]
         if uid == SHENNAI_ID and any(k in message for k in keywords):
             MEMORY["meta"]["dog"] += 1
             save_json("files/meta.json", MEMORY["meta"])

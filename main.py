@@ -18,7 +18,7 @@ ROOM_ID = 27885573
 # ROOM_ID = 1828180031
 
 STATUS = 1
-LIVE_STATUS = 0
+LIVE_STATUS = 1
 
 MEMORY = {
     "box": {},
@@ -72,7 +72,7 @@ async def init_get_room_status():
         LIVE_STATUS = 1 if status == 1 else 0
         add_log(f"Initial LIVE_STATUS: {LIVE_STATUS}")
     except Exception as e:
-        add_log(f"[ERROR] Failed to get initial LIVE_STATUS", e)
+        add_log(f"[ERROR] Failed to get initial LIVE_STATUS: {e}")
 
 async def reply_worker():
     add_log("Reply queue start")

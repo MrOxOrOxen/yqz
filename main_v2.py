@@ -11,13 +11,14 @@ from bilibili_api.live import LiveDanmaku
 from data import SESSDATA, BILI_JCT, BUVID3
 import random
 from datetime import datetime
-from ids import *
+import re
 
+from ids import *
 from logger import add_log, log_buffer
 from memory_store import MEMORY, processed_records, last_query_time, gachi_last_time, last_save_time, last_log_save, interact_cache, reply_queue, ROOM_ID, credential
 from json_handle import load_json_files, save_json, append_to_jsonl
 from send_reply import reply_worker
-from box_bot import get_box_reply, get_all_box_reply, call_box, call_all_box, call_at_box, call_month_box, call_month_all_box, call_month_at_box
+from box_bot import call_box, call_all_box, call_at_box, call_month_box, call_month_all_box, call_month_at_box
 from gift_bot import get_gift_reply, handle_thank_reply, handle_total_gift_reply, thank_gift, call_at_gift, call_gift
 from eggs import danmu_egg, check_gachi_egg, box_egg, check_global_loss_warning, guard_egg, sc_egg
 
@@ -150,22 +151,22 @@ async def on_danmaku(event):
 
     await danmu_egg()
 
-    if msg == "呼叫盲盒姬":
-        await call_box(uid, uname)
-    elif msg == "呼叫盲盒姬总部":
-        await call_all_box(uid)
-    elif msg == "呼叫礼物姬":
+    if msg == "呼叫礼物姬":
         await call_gift(uid, uname)
-    elif "呼叫盲盒姬@" in msg:
-        await call_at_box(uid, uname, msg)
     elif "呼叫礼物姬@" in msg:
         await call_at_gift(uid, uname, msg)
-    elif "呼叫" in msg and "月" in msg and "盲盒姬总部" in msg:
+    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运)?盲盒姬总部$', msg):
         await call_month_all_box(uid, uname, msg)
-    elif "呼叫" in msg and "月" in msg and "盲盒姬@" in msg:
+    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运)?盲盒姬@(\d+)$', msg):
         await call_month_at_box(uid, uname, msg)
-    elif "呼叫" in msg and "月" in msg and "盲盒姬" in msg:
+    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运)?盲盒姬$', msg):
         await call_month_box(uid, uname, msg)
+    elif re.search(r'^呼叫(心动|幸运S|幸运)?盲盒姬总部$', msg):
+        await call_all_box(uid, uname, msg)
+    elif re.search(r'^呼叫(心动|幸运S|幸运)?盲盒姬@(\d+)$', msg):
+        await call_at_box(uid, uname, msg)
+    elif re.search(r'^呼叫(心动|幸运S|幸运)?盲盒姬$', msg):
+        await call_box(uid, uname, msg)
 
 @room.on('SEND_GIFT')
 async def on_gift(event):
