@@ -199,7 +199,7 @@
 
 1. 更新：月份统计盲盒姬
 2. 所有类型的盲盒姬目前均已支持特定盲盒类型的查询
-3. 将SESSDATA, BILI_JCT与BUVID3获取的方法集成到get_data.py里
+3. 将SESSDATA, BILI_JCT与BUVID3获取的方法集成到get_data.py里，以避免手动复制Windows端数据后ip变化导致bilibili_api数据变化，从而导致账号失效的问题
 
 ### 2026.5.14
 
