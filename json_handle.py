@@ -48,13 +48,15 @@ def load_json_files():
         try:
             with open(audience_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                MEMORY["audience"]["interact_cache"] = data.get("interact_cache", [])
+                MEMORY["audience"] = data
+                # MEMORY["audience"]["interact_cache"] = data.get("interact_cache", [])
                 interact_cache = set(data.get("interact_cache", []))
                 add_log(f"Loaded interact_cache with {len(interact_cache)} entries.")
         except Exception as e:
             add_log(f"[ERROR] Error when reading audience.json: {e}")
 
     else:
+        MEMORY["audience"] = {"interact_cache": []}
         interact_cache = set()
         save_json("files/audience.json", MEMORY["audience"])
         add_log("No audience.json. Total audience starts with 0")
