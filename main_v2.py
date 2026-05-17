@@ -72,7 +72,7 @@ def update_gift_summary(uid, uname, gift_name, num, battery):
 def update_box_summary(uid, uname, count, cost, profit):
     uid_str = str(uid)
     if uid_str not in MEMORY["box"]:
-        MEMORY["box"][uid_str] = {"uid": int(uid), "uname": uname, "count": 0, "cost": 0, "profit": 0}
+        MEMORY["box"][uid_str] = {"uid": int(uid), "uname": uname, "count": 0, "cost": 0, "profit": 0, "is_personal_loss_egg_sent": False}
     user = MEMORY["box"][uid_str]
     user["uname"] = uname
     user["count"] += count
@@ -155,17 +155,17 @@ async def on_danmaku(event):
         await call_gift(uid, uname)
     elif "呼叫礼物姬@" in msg:
         await call_at_gift(uid, uname, msg)
-    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运)?盲盒姬总部$', msg):
+    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱)?盲盒姬总部$', msg):
         await call_month_all_box(uid, uname, msg)
-    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运)?盲盒姬@(\d+)$', msg):
+    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱)?盲盒姬@(\d+)$', msg):
         await call_month_at_box(uid, uname, msg)
-    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运)?盲盒姬$', msg):
+    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱)?盲盒姬$', msg):
         await call_month_box(uid, uname, msg)
-    elif re.search(r'^呼叫(心动|幸运S|幸运)?盲盒姬总部$', msg):
+    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱)?盲盒姬总部$', msg):
         await call_all_box(uid, uname, msg)
-    elif re.search(r'^呼叫(心动|幸运S|幸运)?盲盒姬@(\d+)$', msg):
+    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱)?盲盒姬@(\d+)$', msg):
         await call_at_box(uid, uname, msg)
-    elif re.search(r'^呼叫(心动|幸运S|幸运)?盲盒姬$', msg):
+    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱)?盲盒姬$', msg):
         await call_box(uid, uname, msg)
 
 @room.on('SEND_GIFT')
@@ -189,7 +189,7 @@ async def on_gift(event):
 
         await check_gachi_egg(uid, None, g_profit_battery)
         await box_egg(uid, uname, gift_name, num, bg_cost_battery, g_profit_battery)
-        await check_global_loss_warning(None)
+        await check_global_loss_warning(uid, uname)
 
         if g_profit_battery >= 1000:
             reply = thank_gift(uid, uname, gift_name, g_profit_battery)

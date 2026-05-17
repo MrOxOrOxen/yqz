@@ -6,7 +6,7 @@ from datetime import datetime
 from json_handle import save_json
 import json
 
-# 彩蛋设置
+#### 彩蛋设置
 async def check_gachi_egg(uid, guard_name, battery):
     now = time.time()
     if uid in GACHI_ID and battery >= 52:
@@ -41,18 +41,34 @@ async def box_egg(uid, uname, gift_name, num, cost, profit):
     await huli_box(uid, num)
     await yqz_box(uid, num)
 
-async def check_global_loss_warning(uid):
+async def check_global_loss_warning(uid, uname):
+    uid_str = str(uid)
     if MEMORY["meta"].get("is_loss_warning_sent", False):
         return
 
     if MEMORY["meta"].get("is_whole_profit_msg_sent", False):
         return
 
+    if uid_str not in MEMORY["box"]:
+        return
+
+    user_data = MEMORY["box"][uid_str]
+    personal_net = user_data.get("profit", 0) - user_data.get("cost", 0)
+
+    if not user_data.get("is_personal_loss_egg_sent", False):
+        if personal_net <= -1000:
+            egg_msg = f"[盲盒姬]不赌盲盒不吃亏，一赌盲盒万事悲，哎"
+            await reply_queue.put((uid, egg_msg))
+
+            MEMORY["box"][uid_str]["is_personal_loss_egg_sent"] = True
+            save_json("files/box.json", MEMORY["box"])
+            add_log(f"[盲盒姬] {uname} 净亏损超过阈值")
+
     total_net = sum(u["profit"] - u["cost"] for u in MEMORY["box"].values())
     
     if total_net <= -15000:
         warning_msg = f"[盲盒姬]天台拥挤不要插队，觉得风大的老板走后面楼梯下楼谢谢"
-        await reply_queue.put((uid, warning_msg))
+        await reply_queue.put((None, warning_msg))
         
         MEMORY["meta"]["is_loss_warning_sent"] = True
         save_json("files/meta.json", MEMORY["meta"])
@@ -60,7 +76,7 @@ async def check_global_loss_warning(uid):
 
     if total_net >= 15000:
         msg = f"[盲盒姬]ohhhhhhhhhh转运了转运了！云崎早的直播间竟然欧起来了!！"
-        await reply_queue.put((uid, msg))
+        await reply_queue.put((YQZ_ID, msg))
         MEMORY["meta"]["is_whole_profit_msg_sent"] = True
         save_json("files/meta.json", MEMORY["meta"])
         add_log(f"[盲盒姬] total_net > 15000")

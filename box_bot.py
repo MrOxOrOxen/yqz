@@ -1,4 +1,4 @@
-from memory_store import MEMORY, last_query_time, reply_queue, credential, CN_MONTHS, BOX_LIST_1, BOX_LIST_2, BOX_LIST_3
+from memory_store import MEMORY, last_query_time, reply_queue, credential, CN_MONTHS, BOX_LIST_1, BOX_LIST_2, BOX_LIST_3, BOX_LIST_4
 import time, asyncio
 from ids import *
 from logger import add_log
@@ -27,6 +27,8 @@ async def call_box(uid, uname, msg):
         reply_box_name = "幸运盲盒"
     elif box_name == "幸运S":
         reply_box_name = "幸运盲盒S"
+    elif box_name == "真爱":
+        reply_box_name = "真爱盲盒"
 
     data_type = "box" if box_name is None else "gift"
 
@@ -82,6 +84,8 @@ async def call_all_box(uid, uname, msg):
         reply_box_name = "幸运盲盒"
     elif box_name == "幸运S":
         reply_box_name = "幸运盲盒S"
+    elif box_name == "真爱":
+        reply_box_name = "真爱盲盒"
 
     data_type = "box" if box_name is None else "gift"
 
@@ -154,6 +158,8 @@ async def call_at_box(uid, uname, msg):
         reply_box_name = "幸运盲盒"
     elif box_name == "幸运S":
         reply_box_name = "幸运盲盒S"
+    elif box_name == "真爱":
+        reply_box_name = "真爱盲盒"
 
     data_type = "box" if box_name is None else "gift"
 
@@ -214,6 +220,8 @@ async def call_month_box(uid, uname, msg):
         reply_box_name = "幸运盲盒"
     elif box_name == "幸运S":
         reply_box_name = "幸运盲盒S"
+    elif box_name == "真爱":
+        reply_box_name = "真爱盲盒"
 
     year = datetime.now().year
     data_type = "box" if box_name is None else "gift"
@@ -273,6 +281,8 @@ async def call_month_all_box(uid, uname, msg):
         reply_box_name = "幸运盲盒"
     elif box_name == "幸运S":
         reply_box_name = "幸运盲盒S"
+    elif box_name == "真爱":
+        reply_box_name = "真爱盲盒"
 
     year = datetime.now().year
     data_type = "box" if box_name is None else "gift"
@@ -350,6 +360,8 @@ async def call_month_at_box(uid, uname, msg):
         reply_box_name = "幸运盲盒"
     elif box_name == "幸运S":
         reply_box_name = "幸运盲盒S"
+    elif box_name == "真爱":
+        reply_box_name = "真爱盲盒"
 
     year = datetime.now().year
     data_type = "box" if box_name is None else "gift"
@@ -408,11 +420,11 @@ def box_calculate(uid_str, daily_data, check_user_type):
 def boxn_calculate(uid_str, daily_data, n, check_user_type):
     box_list = globals().get(f"BOX_LIST_{n}", {})
     daily_cnt, daily_cost, daily_profit = 0, 0, 0
-    single_cost = [50, 500, 150]
+    single_cost = [50, 500, 150, 250]
     if check_user_type == "single":
         for key, value in daily_data.items():
             if key == uid_str:
-                for gift_name, cnt in value.get("gift_list", []).items():
+                for gift_name, cnt in value.get("gift_list", {}).items():
                     if gift_name in box_list:
                         price = box_list[gift_name]
                         daily_cnt += cnt
@@ -420,7 +432,7 @@ def boxn_calculate(uid_str, daily_data, n, check_user_type):
                         daily_profit += cnt * price
     else:
         for key, value in daily_data.items():
-            for gift_name, cnt in value.get("gift_list", []).items():
+            for gift_name, cnt in value.get("gift_list", {}).items():
                 if gift_name in box_list:
                     price = box_list[gift_name]
                     daily_cnt += cnt
@@ -486,6 +498,12 @@ async def load_month_data(uid, month, year, data_type, box_name=None, check_user
             month_cost += daily_cost
             month_profit += daily_profit
 
+        elif data_type == "gift" and box_name == "真爱":
+            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=4, check_user_type=check_user_type)
+            month_cnt += daily_cnt
+            month_cost += daily_cost
+            month_profit += daily_profit
+
     # 当天的盲盒数据
     if data_type == "box":
         try:
@@ -525,6 +543,17 @@ async def load_month_data(uid, month, year, data_type, box_name=None, check_user
             with open("files/gift.json", "r", encoding="utf-8") as f:
                 daily_data = json.load(f)
             daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=3, check_user_type=check_user_type)
+            month_cnt += daily_cnt
+            month_cost += daily_cost
+            month_profit += daily_profit
+        except Exception as e:
+            print(f"Error when loading gift.json: {e}")
+
+    elif data_type == "gift" and box_name == "真爱":
+        try:
+            with open("files/gift.json", "r", encoding="utf-8") as f:
+                daily_data = json.load(f)
+            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=4, check_user_type=check_user_type)
             month_cnt += daily_cnt
             month_cost += daily_cost
             month_profit += daily_profit
@@ -575,17 +604,26 @@ async def load_daily_data(uid, data_type, box_name=None, check_user_type="single
         except Exception as e:
             print(f"Error when loading gift.json: {e}")
 
+    elif data_type == "gift" and box_name == "真爱":
+        try:
+            with open("files/gift.json", "r", encoding="utf-8") as f:
+                daily_data = json.load(f)
+            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=4, check_user_type=check_user_type)
+            return daily_cnt, daily_cost, daily_profit
+        except Exception as e:
+            print(f"Error when loading gift.json: {e}")
+
     return daily_cnt, daily_cost, daily_profit
 
 def extract_month_and_type(msg):
-    match = re.search(r'呼叫(\d{1,2})月(心动|幸运S|幸运)?盲盒姬', msg)
+    match = re.search(r'呼叫(\d{1,2})月(心动|幸运S|幸运|真爱)?盲盒姬', msg)
     if match:
         month = int(match.group(1))
         box_name = match.group(2) or None
         if 1 <= month <= 12:
             return month, box_name
     
-    match = re.search(r'呼叫(一|二|三|四|五|六|七|八|九|十|十一|十二)月(心动|幸运S|幸运)?盲盒姬', msg)
+    match = re.search(r'呼叫(一|二|三|四|五|六|七|八|九|十|十一|十二)月(心动|幸运S|幸运|真爱)?盲盒姬', msg)
     if match:
         box_name = match.group(2) or None
         return CN_MONTHS[match.group(1)], box_name
@@ -593,7 +631,7 @@ def extract_month_and_type(msg):
     return None, None
 
 def extract_type(msg):
-    match = re.search(r'呼叫(心动|幸运S|幸运)?盲盒姬', msg)
+    match = re.search(r'呼叫(心动|幸运S|幸运|真爱)?盲盒姬', msg)
     if match:
         box_name = match.group(1) or None
         return box_name
