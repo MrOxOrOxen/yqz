@@ -12,6 +12,7 @@ from data import SESSDATA, BILI_JCT, BUVID3
 import random
 from datetime import datetime
 import re
+from pydantic import BaseModel
 
 from ids import *
 from logger import add_log, log_buffer
@@ -115,26 +116,46 @@ def on_gift_saved():
 # 周期性任务
 async def periodic_tasks():
     global last_save_time, last_log_save, LIVE_STATUS
-    while True:
-        now = time.time()
-        if now - last_save_time > 30:
-            print(f"LIVE_STATUS: {LIVE_STATUS}")
-            # save_json("files/box.json", MEMORY["box"])
+    try:
+        while True:
+            now = time.time()
+            if now - last_save_time > 30:
+                print(f"LIVE_STATUS: {LIVE_STATUS}")
+                # save_json("files/box.json", MEMORY["box"])
+                save_json("files/gift.json", MEMORY["gift"])
+                save_json("files/all.json", MEMORY["all"])
+                save_json("files/meta.json", MEMORY["meta"])
+
+                if MEMORY["danmu"]:
+                    append_to_jsonl("files/danmu.jsonl", MEMORY["danmu"])
+                    MEMORY["meta"]["total_danmu_cnt_from_start"] += len(MEMORY["danmu"])
+                    MEMORY["danmu"].clear()
+
+                MEMORY["audience"]["interact_cache"] = list(interact_cache)
+                save_json("files/audience.json", MEMORY["audience"])
+                last_save_time = now
+                add_log("All json files saved")
+                on_gift_saved()
+            if now - last_log_save > 5:
+                save_json("files/log.json", log_buffer.buffer)
+                last_log_save = now
+            await asyncio.sleep(2)
+    except asyncio.CancelledError:
+        add_log(f"main.py cancelled. saving json files.")
+        if MEMORY["gift"]:
             save_json("files/gift.json", MEMORY["gift"])
+        if MEMORY["all"]:
             save_json("files/all.json", MEMORY["all"])
+        if MEMORY["meta"]:
             save_json("files/meta.json", MEMORY["meta"])
-            append_to_jsonl("files/danmu.jsonl", MEMORY["danmu"])
-            MEMORY["meta"]["total_danmu_cnt_from_start"] += len(MEMORY["danmu"])
-            # save_json("files/meta.json", MEMORY["meta"])
+        if MEMORY["audience"]:
+            MEMORY["audience"]["interact_cache"] = list(interact_cache)
             save_json("files/audience.json", MEMORY["audience"])
-            MEMORY["danmu"].clear()
-            last_save_time = now
-            add_log("All json files saved")
-            on_gift_saved()
-        if now - last_log_save > 5:
-            save_json("files/log.json", log_buffer.buffer)
-            last_log_save = now
-        await asyncio.sleep(2)
+        if MEMORY["danmu"]:
+            append_to_jsonl("files/danmu.jsonl", MEMORY["danmu"])
+
+        add_log("Emergency data save completed successfully.")
+        raise
 
 # 监听
 room = live.LiveDanmaku(ROOM_ID, credential=credential)
@@ -363,6 +384,47 @@ def get_data():
         "status": STATUS,
         "list": leaderboard
     }
+
+#### 热更新
+class HotGiftInput(BaseModel):
+    uid: int
+    uname: str
+    gift_name: str
+    gift_price: int
+    timestamp: int
+@app.post("/api/hot_gift")
+def api_hot_gift(data: HotGiftInput):
+    r'''
+    curl -X POST "http://127.0.0.1:8000/api/hot_gift" \
+    -H "Content-Type: application/json" \
+    -d '{"uid": , "uname": , "gift_name": , "gift_price": , "timestamp": }'
+    '''
+    uid_str = str(data.uid)
+
+    if uid_str in MEMORY["gift"]:
+        if data.gift_name in MEMORY["gift"][uid_str]["gift_list"]:
+            MEMORY["gift"][uid_str]["gift_list"][data.gift_name] += 1
+        else:
+            MEMORY["gift"][uid_str]["gift_list"][data.gift_name] = 1
+        MEMORY["gift"][uid_str]["profit"] += data.gift_price
+    else:
+        MEMORY["gift"][uid_str] = {
+            "uid": data.uid,
+            "uname": data.uname,
+            "gift_list": {data.gift_name: 1},
+            "profit": data.gift_price
+        }
+
+    MEMORY["all"].append({
+        "uid": data.uid,
+        "uname": data.uname,
+        "time": data.timestamp,
+        "gift_name": data.gift_name,
+        "gift_price": data.gift_price
+    })
+
+    add_log(f"[HOT UPDATE] {data.uname}: {data.gift_name}")
+    return {"status": "success", "message": "Hot update inject completed."}
 
 def patch_ssl():
     ssl_context = ssl.create_default_context()

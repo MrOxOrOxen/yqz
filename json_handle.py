@@ -50,6 +50,7 @@ def load_json_files():
                 data = json.load(f)
                 MEMORY["audience"] = data
                 # MEMORY["audience"]["interact_cache"] = data.get("interact_cache", [])
+                interact_cache.clear()
                 interact_cache = set(data.get("interact_cache", []))
                 add_log(f"Loaded interact_cache with {len(interact_cache)} entries.")
         except Exception as e:
@@ -57,7 +58,7 @@ def load_json_files():
 
     else:
         MEMORY["audience"] = {"interact_cache": []}
-        interact_cache = set()
+        interact_cache.clear()
         save_json("files/audience.json", MEMORY["audience"])
         add_log("No audience.json. Total audience starts with 0")
 
