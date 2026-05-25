@@ -49,12 +49,44 @@ async def init_get_room_status():
     except Exception as e:
         add_log(f"[ERROR] Failed to get initial LIVE_STATUS: {e}")
 
+# 计算大航海连开数量
+def calc_guard_combo(gift_name, total_battery):
+    base = COMBO_GUARD_PRICE.get(gift_name, 1680)
+    remainder = total_battery % base
+    first_map = GUARD_FIRST_PRICE.get(gift_name, {})
+
+    if remainder in first_map:
+        first_price = first_map[remainder]
+        if total_battery <= first_price:
+            return 1, first_price, base
+        cnt = (total_battery - first_price) // base + 1
+        return cnt, first_price, base
+
+    cnt = max(1, round(total_battery / base))
+    avg = total_battery // cnt
+    return cnt, avg, avg
+
 # 内存更新
 def update_all_log(uid, uname, gift_name, battery):
-    MEMORY["all"].append({
-        "uid": int(uid), "uname": uname, "time": int(time.time()),
-        "gift_name": gift_name, "gift_price": battery
-    })
+    if gift_name in COMBO_GUARD_PRICE:
+        cnt, first_price, follow_price = calc_guard_combo(gift_name, battery)
+        for i in range(cnt):
+            single = first_price if i == 0 else follow_price
+            MEMORY["all"].append({
+                "uid": int(uid),
+                "uname": uname,
+                "time": int(time.time()),
+                "gift_name": gift_name,
+                "gift_price": single
+            })
+    else:
+        MEMORY["all"].append({
+            "uid": int(uid),
+            "uname": uname,
+            "time": int(time.time()),
+            "gift_name": gift_name,
+            "gift_price": battery
+        })
 
 def update_danmu_log(uid, uname, msg):
     MEMORY["danmu"].append({
@@ -87,17 +119,21 @@ async def record_to_guard_log(uid, uname, price, guard_level, start_time, source
     if any(p_uid == uid and p_time == start_time for p_uid, p_time in processed_records):
         return
 
+    price = int(price)
+
     if price <= 0:
         price = {1: 199980, 2: 19980, 3: 1980}.get(guard_level, 1980)
 
     guard_name = {1: "总督", 2: "提督", 3: "舰长"}.get(guard_level, "大航海")
 
+    cnt, _, _ = calc_guard_combo(guard_name, price)
+
     processed_records.append((uid, start_time))
     if len(processed_records) > 200: processed_records.pop(0)
     
-    update_gift_summary(uid, uname, guard_name, 1, price)
+    update_gift_summary(uid, uname, guard_name, cnt, price)
     update_all_log(uid, uname, guard_name, price)
-    add_log(f"[{source}] {uname} {guard_name} ({price} 电池)")
+    add_log(f"[{source}] {uname} {guard_name}x{cnt} ({price} 电池)")
 
     await check_gachi_egg(uid, guard_name, price)
 
@@ -306,6 +342,8 @@ async def interact_word(event):
             today = datetime.now().date()
             days_passed = abs((target_date.date() - today).days) + 1
             reply = f"[欢迎姬]报告！发现{days_passed}个卡米宝宝进入云宝的直播间！"
+        elif uid == JIALEISI_ID:
+            reply = '[欢迎姬]报告！发现一个说着"唉，gachi"的早崎鸭进入直播间！'
         elif medal_name == "早崎鸭" and medal_level > 30:
             if uid in WELCOME_MAP:
                 reply = WELCOME_MAP[uid].format(uname=uname)
