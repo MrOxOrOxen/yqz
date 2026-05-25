@@ -4,6 +4,7 @@ from logger import add_log
 from bilibili_api import user
 import re, os, json
 from datetime import datetime
+import time
 
 # 呼叫盲盒姬
 async def call_box(uid, uname, msg):
