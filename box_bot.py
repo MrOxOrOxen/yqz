@@ -1,5 +1,4 @@
-from memory_store import MEMORY, last_query_time, reply_queue, credential, CN_MONTHS, BOX_LIST_1, BOX_LIST_2, BOX_LIST_3, BOX_LIST_4
-import time, asyncio
+from memory_store import *
 from ids import *
 from logger import add_log
 from bilibili_api import user
@@ -19,16 +18,7 @@ async def call_box(uid, uname, msg):
         await asyncio.sleep(4)
 
     box_name = extract_type(msg)
-    if box_name is None:
-        reply_box_name = "盲盒"
-    elif box_name == "心动":
-        reply_box_name = "心动盲盒"
-    elif box_name == "幸运":
-        reply_box_name = "幸运盲盒"
-    elif box_name == "幸运S":
-        reply_box_name = "幸运盲盒S"
-    elif box_name == "真爱":
-        reply_box_name = "真爱盲盒"
+    reply_box_name = BOX_NAME_MAP.get(box_name, "盲盒")
 
     data_type = "box" if box_name is None else "gift"
 
@@ -76,16 +66,7 @@ async def call_all_box(uid, uname, msg):
         await asyncio.sleep(4)
     
     box_name = extract_type(msg)
-    if box_name is None:
-        reply_box_name = "盲盒"
-    elif box_name == "心动":
-        reply_box_name = "心动盲盒"
-    elif box_name == "幸运":
-        reply_box_name = "幸运盲盒"
-    elif box_name == "幸运S":
-        reply_box_name = "幸运盲盒S"
-    elif box_name == "真爱":
-        reply_box_name = "真爱盲盒"
+    reply_box_name = BOX_NAME_MAP.get(box_name, "盲盒")
 
     data_type = "box" if box_name is None else "gift"
 
@@ -150,16 +131,7 @@ async def call_at_box(uid, uname, msg):
         to_check_uname = to_check_info.get("name", "您指定的")
 
     box_name = extract_type(clean_msg)
-    if box_name is None:
-        reply_box_name = "盲盒"
-    elif box_name == "心动":
-        reply_box_name = "心动盲盒"
-    elif box_name == "幸运":
-        reply_box_name = "幸运盲盒"
-    elif box_name == "幸运S":
-        reply_box_name = "幸运盲盒S"
-    elif box_name == "真爱":
-        reply_box_name = "真爱盲盒"
+    reply_box_name = BOX_NAME_MAP.get(box_name, "盲盒")
 
     data_type = "box" if box_name is None else "gift"
 
@@ -212,16 +184,7 @@ async def call_month_box(uid, uname, msg):
     if month is None:
         return
 
-    if box_name is None:
-        reply_box_name = "盲盒"
-    elif box_name == "心动":
-        reply_box_name = "心动盲盒"
-    elif box_name == "幸运":
-        reply_box_name = "幸运盲盒"
-    elif box_name == "幸运S":
-        reply_box_name = "幸运盲盒S"
-    elif box_name == "真爱":
-        reply_box_name = "真爱盲盒"
+    reply_box_name = BOX_NAME_MAP.get(box_name, "盲盒")
 
     year = datetime.now().year
     data_type = "box" if box_name is None else "gift"
@@ -273,16 +236,7 @@ async def call_month_all_box(uid, uname, msg):
     if month is None:
         return
 
-    if box_name is None:
-        reply_box_name = "盲盒"
-    elif box_name == "心动":
-        reply_box_name = "心动盲盒"
-    elif box_name == "幸运":
-        reply_box_name = "幸运盲盒"
-    elif box_name == "幸运S":
-        reply_box_name = "幸运盲盒S"
-    elif box_name == "真爱":
-        reply_box_name = "真爱盲盒"
+    reply_box_name = BOX_NAME_MAP.get(box_name, "盲盒")
 
     year = datetime.now().year
     data_type = "box" if box_name is None else "gift"
@@ -352,16 +306,7 @@ async def call_month_at_box(uid, uname, msg):
     if month is None:
         return
 
-    if box_name is None:
-        reply_box_name = "盲盒"
-    elif box_name == "心动":
-        reply_box_name = "心动盲盒"
-    elif box_name == "幸运":
-        reply_box_name = "幸运盲盒"
-    elif box_name == "幸运S":
-        reply_box_name = "幸运盲盒S"
-    elif box_name == "真爱":
-        reply_box_name = "真爱盲盒"
+    reply_box_name = BOX_NAME_MAP.get(box_name, "盲盒")
 
     year = datetime.now().year
     data_type = "box" if box_name is None else "gift"
@@ -476,33 +421,13 @@ async def load_month_data(uid, month, year, data_type, box_name=None, check_user
 
         if data_type == "box":
             daily_cnt, daily_cost, daily_profit = box_calculate(uid_str, daily_data, check_user_type=check_user_type)
-            month_cnt += daily_cnt
-            month_cost += daily_cost
-            month_profit += daily_profit
-
-        elif data_type == "gift" and box_name == "幸运":
-            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=1, check_user_type=check_user_type)
-            month_cnt += daily_cnt
-            month_cost += daily_cost
-            month_profit += daily_profit
-
-        elif data_type == "gift" and box_name == "幸运S":
-            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=2, check_user_type=check_user_type)
-            month_cnt += daily_cnt
-            month_cost += daily_cost
-            month_profit += daily_profit
-
-        elif data_type == "gift" and box_name == "心动":
-            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=3, check_user_type=check_user_type)
-            month_cnt += daily_cnt
-            month_cost += daily_cost
-            month_profit += daily_profit
-
-        elif data_type == "gift" and box_name == "真爱":
-            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=4, check_user_type=check_user_type)
-            month_cnt += daily_cnt
-            month_cost += daily_cost
-            month_profit += daily_profit
+            
+        elif data_type == "gift" and box_name in GIFT_BOX_MAP:
+            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=GIFT_BOX_MAP[box_name], check_user_type=check_user_type)
+            
+        month_cnt += daily_cnt
+        month_cost += daily_cost
+        month_profit += daily_profit
 
     # 当天的盲盒数据
     if data_type == "box":
@@ -514,51 +439,18 @@ async def load_month_data(uid, month, year, data_type, box_name=None, check_user
             month_cost += daily_cost
             month_profit += daily_profit
         except Exception as e:
-            print(f"Error when loading box.json: {e}")
+            print(f"No box.json: {e}, command passed")
 
-    elif data_type == "gift" and box_name == "幸运":
+    elif data_type == "gift" and box_name in GIFT_BOX_MAP:
         try:
             with open("files/gift.json", "r", encoding="utf-8") as f:
                 daily_data = json.load(f)
-            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=1, check_user_type=check_user_type)
+            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=GIFT_BOX_MAP[box_name], check_user_type=check_user_type)
             month_cnt += daily_cnt
             month_cost += daily_cost
             month_profit += daily_profit
         except Exception as e:
-            print(f"Error when loading gift.json: {e}")
-
-    elif data_type == "gift" and box_name == "幸运S":
-        try:
-            with open("files/gift.json", "r", encoding="utf-8") as f:
-                daily_data = json.load(f)
-            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=2, check_user_type=check_user_type)
-            month_cnt += daily_cnt
-            month_cost += daily_cost
-            month_profit += daily_profit
-        except Exception as e:
-            print(f"Error when loading gift.json: {e}")
-
-    elif data_type == "gift" and box_name == "心动":
-        try:
-            with open("files/gift.json", "r", encoding="utf-8") as f:
-                daily_data = json.load(f)
-            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=3, check_user_type=check_user_type)
-            month_cnt += daily_cnt
-            month_cost += daily_cost
-            month_profit += daily_profit
-        except Exception as e:
-            print(f"Error when loading gift.json: {e}")
-
-    elif data_type == "gift" and box_name == "真爱":
-        try:
-            with open("files/gift.json", "r", encoding="utf-8") as f:
-                daily_data = json.load(f)
-            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=4, check_user_type=check_user_type)
-            month_cnt += daily_cnt
-            month_cost += daily_cost
-            month_profit += daily_profit
-        except Exception as e:
-            print(f"Error when loading gift.json: {e}")
+            print(f"No gift.json: {e}, command passed")
 
     return month_cnt, month_cost, month_profit
 
@@ -575,55 +467,28 @@ async def load_daily_data(uid, data_type, box_name=None, check_user_type="single
             daily_cnt, daily_cost, daily_profit = box_calculate(uid_str, daily_data, check_user_type=check_user_type)
             return daily_cnt, daily_cost, daily_profit
         except Exception as e:
-            print(f"Error when loading box.json: {e}")
+            print(f"No gift.json: {e}, command passed")
 
-    elif data_type == "gift" and box_name == "幸运":
+    elif data_type == "gift" and box_name in GIFT_BOX_MAP:
         try:
             with open("files/gift.json", "r", encoding="utf-8") as f:
                 daily_data = json.load(f)
-            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=1, check_user_type=check_user_type)
+            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=GIFT_BOX_MAP[box_name], check_user_type=check_user_type)
             return daily_cnt, daily_cost, daily_profit
         except Exception as e:
-            print(f"Error when loading gift.json: {e}")
-
-    elif data_type == "gift" and box_name == "幸运S":
-        try:
-            with open("files/gift.json", "r", encoding="utf-8") as f:
-                daily_data = json.load(f)
-            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=2, check_user_type=check_user_type)
-            return daily_cnt, daily_cost, daily_profit
-        except Exception as e:
-            print(f"Error when loading gift.json: {e}")
-
-    elif data_type == "gift" and box_name == "心动":
-        try:
-            with open("files/gift.json", "r", encoding="utf-8") as f:
-                daily_data = json.load(f)
-            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=3, check_user_type=check_user_type)
-            return daily_cnt, daily_cost, daily_profit
-        except Exception as e:
-            print(f"Error when loading gift.json: {e}")
-
-    elif data_type == "gift" and box_name == "真爱":
-        try:
-            with open("files/gift.json", "r", encoding="utf-8") as f:
-                daily_data = json.load(f)
-            daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, n=4, check_user_type=check_user_type)
-            return daily_cnt, daily_cost, daily_profit
-        except Exception as e:
-            print(f"Error when loading gift.json: {e}")
+            print(f"No gift.json: {e}, command passed")
 
     return daily_cnt, daily_cost, daily_profit
 
 def extract_month_and_type(msg):
-    match = re.search(r'呼叫(\d{1,2})月(心动|幸运S|幸运|真爱)?盲盒姬', msg)
+    match = re.search(r'呼叫(\d{1,2})月(心动|幸运S|幸运|真爱|梦幻之夏)?盲盒姬', msg)
     if match:
         month = int(match.group(1))
         box_name = match.group(2) or None
         if 1 <= month <= 12:
             return month, box_name
     
-    match = re.search(r'呼叫(一|二|三|四|五|六|七|八|九|十|十一|十二)月(心动|幸运S|幸运|真爱)?盲盒姬', msg)
+    match = re.search(r'呼叫(一|二|三|四|五|六|七|八|九|十|十一|十二)月(心动|幸运S|幸运|真爱|梦幻之夏)?盲盒姬', msg)
     if match:
         box_name = match.group(2) or None
         return CN_MONTHS[match.group(1)], box_name
@@ -631,7 +496,7 @@ def extract_month_and_type(msg):
     return None, None
 
 def extract_type(msg):
-    match = re.search(r'呼叫(心动|幸运S|幸运|真爱)?盲盒姬', msg)
+    match = re.search(r'呼叫(心动|幸运S|幸运|真爱|梦幻之夏)?盲盒姬', msg)
     if match:
         box_name = match.group(1) or None
         return box_name

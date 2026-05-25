@@ -4,7 +4,7 @@ import time
 import aiohttp
 from logger import add_log
 
-from memory_store import reply_queue, ROOM_ID
+from memory_store import *
 from data import SESSDATA, BILI_JCT, BUVID3
 
 async def reply_worker():

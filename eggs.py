@@ -1,6 +1,6 @@
 from ids import *
 import time
-from memory_store import MEMORY, reply_queue, gachi_last_time
+from memory_store import *
 from logger import add_log
 from datetime import datetime
 from json_handle import save_json

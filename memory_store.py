@@ -1,6 +1,7 @@
 import asyncio
 from data import SESSDATA, BILI_JCT, BUVID3
 from bilibili_api import Credential
+from ids import *
 
 MEMORY = {
     "box": {},
@@ -38,6 +39,19 @@ ROOM_ID = 27885573
 
 credential = Credential(sessdata=SESSDATA, bili_jct=BILI_JCT)
 
+WELCOME_MAP = {
+    GACHI_ID[0]: '[欢迎姬]报告！发现一个说着"早早天下第一可爱！"的gachi进入直播间！',
+    GACHI_ID[1]: '[欢迎姬]报告！发现一个说着"早早天下第一可爱！"的gachi进入直播间！',
+    GACHI_ID[2]: '[欢迎姬]报告！发现一个说着"早早天下第一可爱！"的gachi进入直播间！',
+    GACHI_ID[3]: "[欢迎姬]报告！发现{uname}老师来直播间盯着云宝今天也要早早睡觉！",
+    GACHI_GACHI_ID: "[欢迎姬]报告！发现{uname}老师来直播间盯着庄宝今天也要早早睡觉！",
+    JIALEISI_ID: '[欢迎姬]报告！发现一个说着"唉，gachi"的早崎鸭进入直播间！',
+    ZAIYI_ID: "[欢迎姬]报告！一只叫{uname}的大傻呗进入了直播间！",
+    XINGCHEN_KAISER_ID: "[欢迎姬]一只叫{uname}的早崎鸭怎么学习学到直播间嘞？",
+    FEIXINGTING_ID: "[欢迎姬]报告！观测到一架飞行艇飞入直播间！",
+    SHUANGSHUI_ID: "[欢迎姬]报告喵！发现爽睡老师进入直播间喵！",
+}
+
 CN_MONTHS = {
     "一": 1,
     "二": 2,
@@ -51,6 +65,22 @@ CN_MONTHS = {
     "十": 10,
     "十一": 11,
     "十二": 12
+}
+
+BOX_MEMORY_MAP = {
+    "心动": "心动盲盒",
+    "幸运": "幸运盲盒",
+    "幸运S": "幸运盲盒S",
+    "真爱": "真爱盲盒",
+    "梦幻之夏": "梦幻之夏盲盒",
+}
+
+GIFT_BOX_MAP = {
+    "幸运": 1,
+    "幸运S": 2,
+    "心动": 3,
+    "真爱": 4,
+    "梦幻之夏": 5,
 }
 
 # 幸运盲盒
@@ -92,4 +122,14 @@ BOX_LIST_4 = {
     "玫瑰序章": 260,
     "云间来信": 190,
     "心跳曲线": 50
+}
+
+# 梦幻之夏盲盒
+BOX_LIST_5 = {
+    "爱心气球": 50,
+    "BW蛋糕": 190,
+    "BW权杖": 260,
+    "玫瑰花冠": 660,
+    "花束殿堂": 5000,
+    "加冕仪式": 12000
 }

@@ -13,10 +13,11 @@ import random
 from datetime import datetime
 import re
 from pydantic import BaseModel
+from typing import Optional
 
 from ids import *
 from logger import add_log, log_buffer
-from memory_store import MEMORY, processed_records, last_query_time, gachi_last_time, last_save_time, last_log_save, interact_cache, reply_queue, ROOM_ID, credential
+from memory_store import *
 from json_handle import load_json_files, save_json, append_to_jsonl
 from send_reply import reply_worker
 from box_bot import call_box, call_all_box, call_at_box, call_month_box, call_month_all_box, call_month_at_box
@@ -163,36 +164,35 @@ room = live.LiveDanmaku(ROOM_ID, credential=credential)
 @room.on('DANMU_MSG')
 async def on_danmaku(event):
     global last_query_time, LIVE_STATUS
-    # global last_global_reply
-    if LIVE_STATUS == 0:
-        return
+
     data = event['data']['info']
     msg, uid, uname = data[1], data[2][0], data[2][1]
-    update_danmu_log(uid, uname, msg)
-
-    await danmu_egg()
-
+    
     if msg == "呼叫礼物姬":
         await call_gift(uid, uname)
     elif "呼叫礼物姬@" in msg:
         await call_at_gift(uid, uname, msg)
-    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱)?盲盒姬总部$', msg):
+    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱|梦幻之夏)?盲盒姬总部$', msg):
         await call_month_all_box(uid, uname, msg)
-    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱)?盲盒姬@(\d+)$', msg):
+    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱|梦幻之夏)?盲盒姬@(\d+)$', msg):
         await call_month_at_box(uid, uname, msg)
-    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱)?盲盒姬$', msg):
+    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱|梦幻之夏)?盲盒姬$', msg):
         await call_month_box(uid, uname, msg)
-    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱)?盲盒姬总部$', msg):
+    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱|梦幻之夏)?盲盒姬总部$', msg):
         await call_all_box(uid, uname, msg)
-    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱)?盲盒姬@(\d+)$', msg):
+    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱|梦幻之夏)?盲盒姬@(\d+)$', msg):
         await call_at_box(uid, uname, msg)
-    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱)?盲盒姬$', msg):
+    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱|梦幻之夏)?盲盒姬$', msg):
         await call_box(uid, uname, msg)
+
+    if LIVE_STATUS == 1:
+        await danmu_egg()
+        update_danmu_log(uid, uname, msg)
 
 @room.on('SEND_GIFT')
 async def on_gift(event):
     global LIVE_STATUS
-    if LIVE_STATUS == 0:
+    if LIVE_STATUS != 1:
         return
     data = event['data']['data']
     uid, gift_name, num = data.get('uid'), data.get('giftName'), data.get('num', 1)
@@ -234,7 +234,7 @@ async def on_gift(event):
 @room.on('SUPER_CHAT_MESSAGE')
 async def on_sc(event):
     global LIVE_STATUS
-    if LIVE_STATUS == 0:
+    if LIVE_STATUS != 1:
         return
     data = event['data']['data']
     uid, price, uname, content = data.get('uid'), data.get('price', 0), data.get('user_info', {}).get('uname', '用户'), data.get('message', '')
@@ -253,7 +253,7 @@ async def on_sc(event):
 @room.on('USER_TOAST_MSG')
 async def handle_toast(event):
     global LIVE_STATUS
-    if LIVE_STATUS == 0:
+    if LIVE_STATUS != 1:
         return
     data = event['data']['data']
     guard_level = data.get('guard_level')
@@ -269,7 +269,7 @@ async def handle_toast(event):
 @room.on('GUARD_BUY')
 async def handle_guard(event):
     global LIVE_STATUS
-    if LIVE_STATUS == 0:
+    if LIVE_STATUS != 1:
         return 
     data = event['data']['data']
     await asyncio.sleep(2)
@@ -282,7 +282,7 @@ async def handle_guard(event):
 @room.on('INTERACT_WORD_V2')
 async def interact_word(event):
     global interact_cache, LIVE_STATUS
-    if LIVE_STATUS == 0:
+    if LIVE_STATUS != 1:
         return
 
     data = event['data']['data']
@@ -296,9 +296,9 @@ async def interact_word(event):
     reply = None
     
     if uid in interact_cache:
-            return
+        return
 
-    if medal:
+    if medal and uid != ASPK_ID:
         medal_name = medal.get('name', None)
         medal_level = medal.get('level', 0)
         if uid == ADMIN_ID:
@@ -306,23 +306,9 @@ async def interact_word(event):
             today = datetime.now().date()
             days_passed = abs((target_date.date() - today).days) + 1
             reply = f"[欢迎姬]报告！发现{days_passed}个卡米宝宝进入云宝的直播间！"
-        elif uid == GACHI_ID[3]:
-            reply = f"[欢迎姬]报告！发现庄生梦方宜老师来直播间盯着云宝今天也要早早睡觉！"
-        elif uid == ASPK_ID:
-            reply = f"[欢迎姬]欢迎帅神！！"
-        elif uid == JIALEISI_ID:
-            reply = f'[欢迎姬]报告！发现一个说着“唉，gachi”的早崎鸭进入直播间！'
         elif medal_name == "早崎鸭" and medal_level > 30:
-            if uid in GACHI_ID[:3]:
-                reply = f'[欢迎姬]报告！发现一个说着“早早天下第一可爱！”的gachi进入直播间！'
-            elif uid == ZAIYI_ID:
-                reply = f"[欢迎姬]报告！一只叫{uname}的大傻呗进入了直播间！"
-            elif uid == XINGCHEN_KAISER_ID:
-                reply = f"[欢迎姬]一只叫{uname}的早崎鸭怎么学习学到直播间嘞？"
-            elif uid == FEIXINGTING_ID:
-                reply = f"[欢迎姬]报告！观测到一架飞行艇飞入直播间！"
-            elif uid == SHUANGSHUI_ID:
-                reply = f"[欢迎姬]报告喵！发现爽睡老师进入直播间喵！"
+            if uid in WELCOME_MAP:
+                reply = WELCOME_MAP[uid].format(uname=uname)
             else:
                 if len(uname) > 16:
                     uname = uname[:13] + "..."
@@ -336,7 +322,10 @@ async def interact_word(event):
     save_json("files/audience.json", MEMORY["audience"])
             
     if reply is not None:
-        await reply_queue.put((uid, reply))
+        if uid == GACHI_GACHI_ID and GACHI_ID[3] in MEMORY["audience"]["interact_cache"]:
+            await reply_queue.put((GACHI_ID[3], reply))
+        elif uid != GACHI_GACHI_ID:
+            await reply_queue.put((uid, reply))
         add_log(f"[欢迎姬] 欢迎{uname}")
 
 @room.on('LIVE')
@@ -396,8 +385,8 @@ class HotGiftInput(BaseModel):
 def api_hot_gift(data: HotGiftInput):
     r'''
     curl -X POST "http://127.0.0.1:8000/api/hot_gift" \
-    -H "Content-Type: application/json" \
-    -d '{"uid": , "uname": , "gift_name": , "gift_price": , "timestamp": }'
+      -H "Content-Type: application/json" \
+      -d '{"uid": , "uname": , "gift_name": , "gift_price": , "timestamp": }'
     '''
     uid_str = str(data.uid)
 
@@ -425,6 +414,27 @@ def api_hot_gift(data: HotGiftInput):
 
     add_log(f"[HOT UPDATE] {data.uname}: {data.gift_name}")
     return {"status": "success", "message": "Hot update inject completed."}
+
+class SendDanmu(BaseModel):
+    msg: str
+    at_uid: Optional[int] = None
+@app.post("/api/send_danmu")
+async def api_send_danmu(data: SendDanmu):
+    r'''
+    curl -X POST "http://127.0.0.1:8000/api/send_danmu" \
+      -H "Content-Type: application/json" \
+      -d '{"msg":"", "at_uid":}'
+    '''
+    msg = data.msg.strip()
+    uid = data.at_uid
+
+    if uid:
+        await reply_queue.put((uid, msg))
+    else:
+        await reply_queue.put((None, msg))
+
+    add_log(f"[SEND DANMU] {msg}" + (f" @{uid}" if uid else ""))
+    return {"status": "success", "sent": msg, "at_uid": uid}
 
 def patch_ssl():
     ssl_context = ssl.create_default_context()

@@ -1,4 +1,4 @@
-from memory_store import reply_queue, MEMORY, last_query_time, credential
+from memory_store import *
 from logger import add_log
 import random
 from json_handle import save_json

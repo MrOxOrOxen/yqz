@@ -1,5 +1,5 @@
 import json, os, random
-from memory_store import interact_cache, MEMORY
+from memory_store import *
 from logger import add_log, log_buffer
 
 def load_json_files():
