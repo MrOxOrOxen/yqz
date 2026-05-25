@@ -1,6 +1,6 @@
 # 哔哩哔哩直播间机器人
 
-*Last updated at 24 May, 2026*
+*Last updated at 26 May, 2026*
 
 *Copyright © 2026 云崎早_haya & 晚安卡米宝宝.*
 
@@ -196,6 +196,11 @@
    - QQ：通过舰长群或私信联系
 
 ## 6 更新日志
+
+### 2026.5.26
+
+1. 修复用户连续开通多月大航海，礼物日志却将大航海数量记录为1的问题；
+2. 修复程序重启时audience.json数据被异常抹除的问题。其原因为global interact_cache后重新对interact_cache进行赋值，导致产生了幽灵变量。
 
 ### 2026.5.24
 
