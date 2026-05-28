@@ -1,10 +1,10 @@
 # 哔哩哔哩直播间机器人
 
-*Last updated at 26 May, 2026*
+*Last updated at 28 May, 2026*
 
-*Copyright © 2026 云崎早_haya & 晚安卡米宝宝.*
+Copyright © 2026 云崎早_haya & 晚安卡米宝宝
 
-*All rights reserved.*
+All rights reserved.
 
 本机器人为哔哩哔哩用户“云崎早_haya”的直播间专用机器人。包含以下功能：
 
