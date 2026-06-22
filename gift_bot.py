@@ -71,6 +71,10 @@ def thank_gift(uid, uname, gift_name, gift_value):
         return f"[礼物姬]哇！感谢{uname}老师的{gift_name}！老板大气！"
 
     else:
+        # 卡米的一百天彩蛋
+        if uid == ADMIN_ID and gift_name == "为你摘星":
+            return None
+
         if len(uname) > 15:
             uname = uname[:12] + "..."
         return f"[礼物姬]哇！感谢{uname}老师投喂的{gift_name}！老板大气！"

@@ -5,6 +5,7 @@ from bilibili_api import user
 import re, os, json
 from datetime import datetime
 import time
+import asyncio
 
 # 呼叫盲盒姬
 async def call_box(uid, uname, msg):
@@ -19,7 +20,7 @@ async def call_box(uid, uname, msg):
         await asyncio.sleep(4)
 
     box_name = extract_type(msg)
-    reply_box_name = BOX_NAME_MAP.get(box_name, "盲盒")
+    reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
 
     data_type = "box" if box_name is None else "gift"
 
@@ -67,7 +68,7 @@ async def call_all_box(uid, uname, msg):
         await asyncio.sleep(4)
     
     box_name = extract_type(msg)
-    reply_box_name = BOX_NAME_MAP.get(box_name, "盲盒")
+    reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
 
     data_type = "box" if box_name is None else "gift"
 
@@ -127,12 +128,16 @@ async def call_at_box(uid, uname, msg):
         to_check_uname = user_data.get("uname", "您指定的")
     else:
         to_check_uid = int(to_check_uid_str.strip())
-        u = user.User(to_check_uid, credential=credential)
-        to_check_info = await u.get_user_info()
-        to_check_uname = to_check_info.get("name", "您指定的")
+        try:
+            u = user.User(to_check_uid, credential=credential)
+            to_check_info = await u.get_user_info()
+            to_check_uname = to_check_info.get("name", "您指定的")
+        except Exception as e:
+            to_check_uname = "Default"
+            print(f"ERROR when loading to_check_uname: {e}")
 
     box_name = extract_type(clean_msg)
-    reply_box_name = BOX_NAME_MAP.get(box_name, "盲盒")
+    reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
 
     data_type = "box" if box_name is None else "gift"
 
@@ -185,7 +190,7 @@ async def call_month_box(uid, uname, msg):
     if month is None:
         return
 
-    reply_box_name = BOX_NAME_MAP.get(box_name, "盲盒")
+    reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
 
     year = datetime.now().year
     data_type = "box" if box_name is None else "gift"
@@ -237,7 +242,7 @@ async def call_month_all_box(uid, uname, msg):
     if month is None:
         return
 
-    reply_box_name = BOX_NAME_MAP.get(box_name, "盲盒")
+    reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
 
     year = datetime.now().year
     data_type = "box" if box_name is None else "gift"
@@ -298,16 +303,20 @@ async def call_month_at_box(uid, uname, msg):
         to_check_uname = user_data.get("uname", "您指定的")
     else:
         to_check_uid = int(to_check_uid_str.strip())
-        u = user.User(to_check_uid, credential=credential)
-        to_check_info = await u.get_user_info()
-        to_check_uname = to_check_info.get("name", "您指定的")
+        try:
+            u = user.User(to_check_uid, credential=credential)
+            to_check_info = await u.get_user_info()
+            to_check_uname = to_check_info.get("name", "您指定的")
+        except Exception as e:
+            to_check_uname = "Default"
+            print(f"ERROR when loading to_check_uname: {e}")
 
     month, box_name = extract_month_and_type(clean_msg)
 
     if month is None:
         return
 
-    reply_box_name = BOX_NAME_MAP.get(box_name, "盲盒")
+    reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
 
     year = datetime.now().year
     data_type = "box" if box_name is None else "gift"
@@ -366,7 +375,7 @@ def box_calculate(uid_str, daily_data, check_user_type):
 def boxn_calculate(uid_str, daily_data, n, check_user_type):
     box_list = globals().get(f"BOX_LIST_{n}", {})
     daily_cnt, daily_cost, daily_profit = 0, 0, 0
-    single_cost = [50, 500, 150, 250]
+    single_cost = [50, 500, 150, 250, 250, 90, 90]
     if check_user_type == "single":
         for key, value in daily_data.items():
             if key == uid_str:
@@ -468,7 +477,7 @@ async def load_daily_data(uid, data_type, box_name=None, check_user_type="single
             daily_cnt, daily_cost, daily_profit = box_calculate(uid_str, daily_data, check_user_type=check_user_type)
             return daily_cnt, daily_cost, daily_profit
         except Exception as e:
-            print(f"No gift.json: {e}, command passed")
+            print(f"No box.json: {e}, command passed")
 
     elif data_type == "gift" and box_name in GIFT_BOX_MAP:
         try:
@@ -482,14 +491,14 @@ async def load_daily_data(uid, data_type, box_name=None, check_user_type="single
     return daily_cnt, daily_cost, daily_profit
 
 def extract_month_and_type(msg):
-    match = re.search(r'呼叫(\d{1,2})月(心动|幸运S|幸运|真爱|梦幻之夏)?盲盒姬', msg)
+    match = re.search(r'呼叫(\d{1,2})月(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意)?盲盒姬', msg)
     if match:
         month = int(match.group(1))
         box_name = match.group(2) or None
         if 1 <= month <= 12:
             return month, box_name
     
-    match = re.search(r'呼叫(一|二|三|四|五|六|七|八|九|十|十一|十二)月(心动|幸运S|幸运|真爱|梦幻之夏)?盲盒姬', msg)
+    match = re.search(r'呼叫(一|二|三|四|五|六|七|八|九|十|十一|十二)月(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意)?盲盒姬', msg)
     if match:
         box_name = match.group(2) or None
         return CN_MONTHS[match.group(1)], box_name
@@ -497,7 +506,7 @@ def extract_month_and_type(msg):
     return None, None
 
 def extract_type(msg):
-    match = re.search(r'呼叫(心动|幸运S|幸运|真爱|梦幻之夏)?盲盒姬', msg)
+    match = re.search(r'呼叫(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意)?盲盒姬', msg)
     if match:
         box_name = match.group(1) or None
         return box_name

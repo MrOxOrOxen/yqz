@@ -27,6 +27,17 @@ os.makedirs(folder_box, exist_ok=True)
 os.makedirs(folder_gift, exist_ok=True)
 os.makedirs(folder_all, exist_ok=True)
 
+# judgment
+try:
+    with open('files/danmu.jsonl', 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+        if len(lines) <= 1:
+            print("No live info. Program exiting.")
+            sys.exit(1)
+except Exception as e:
+    print("No live info. Program exiting.")
+    sys.exit(1)
+
 # all.json
 try:
     with open('files/all.json', 'r', encoding='utf-8') as f:

@@ -5,11 +5,12 @@ from logger import add_log
 from datetime import datetime
 from json_handle import save_json
 import json
+import random
 
 #### 彩蛋设置
 async def check_gachi_egg(uid, guard_name, battery):
     now = time.time()
-    if uid in GACHI_ID and battery >= 52:
+    if uid in GACHI_ID and battery >= 52 and battery < 1000:
         if uid not in gachi_last_time or (now - gachi_last_time[uid] > 600):
             gachi_last_time[uid] = now
             await reply_queue.put((uid, "[礼物姬]唉gachi"))
@@ -34,7 +35,7 @@ async def box_egg(uid, uname, gift_name, num, cost, profit):
                 old_count = current_count - num
                 for i in range(int(old_count) + 1, int(current_count) + 1):
                     if i % 50 == 1:
-                        await reply_queue.put((uid, "[盲盒姬]云宝你也在抽盲盒喔，别抽了好不好"))
+                        await reply_queue.put((uid, "[盲盒姬]云宝你也在抽盲盒喔"))
                         add_log("[盲盒姬] yqz_box")
                         break
     
@@ -81,8 +82,8 @@ async def check_global_loss_warning(uid, uname):
         save_json("files/meta.json", MEMORY["meta"])
         add_log(f"[盲盒姬] total_net > 15000")
 
-
-async def danmu_egg():
+# danmu_egg不可热修改
+async def danmu_egg(count=50):
     async def birthday():
         if datetime.now().strftime("%m%d") != "0503":
             return False
@@ -92,7 +93,7 @@ async def danmu_egg():
 
         try:
             total_count = MEMORY["meta"].get("total_danmu_cnt_from_start", 0) + len(MEMORY["danmu"])
-            if total_count >= 100:
+            if total_count >= 30:
                 MEMORY["meta"]["is_birthday_msg_sent"] = True
                 save_json("files/meta.json", MEMORY["meta"])
                 birthday_msg = "[卡米宝宝]今天是全世界最最最可爱的云崎早的生日，让我们祝云宝生日快乐！"
@@ -116,10 +117,10 @@ async def danmu_egg():
         try:
             total_count = MEMORY["meta"].get("total_danmu_cnt_from_start", 0) + len(MEMORY["danmu"])
 
-            if total_count >= 100:
+            if total_count >= count:
                 MEMORY["meta"]["is_kfc_msg_sent"] = True
                 save_json("files/meta.json", MEMORY["meta"])
-                kfc_msg = "[礼物姬]今天是星期四，不想被做成烤鸭的早崎鸭请自觉上交50元谢谢"
+                kfc_msg = "[礼物姬]疯狂疯狂星期四，早崎鸭一只九块九"
                 await reply_queue.put((YQZ_ID, kfc_msg))
                 add_log(f"[礼物姬] kfc")
         except Exception as e:
@@ -138,10 +139,10 @@ async def danmu_egg():
 
         try:
             total_count = MEMORY["meta"].get("total_danmu_cnt_from_start", 0) + len(MEMORY["danmu"])
-            if total_count >= 100:
+            if total_count >= count:
                 MEMORY["meta"]["is_castle_msg_sent"] = True
                 save_json("files/meta.json", MEMORY["meta"])
-                castle_msg = "[盲盒姬]听说今天城堡概率翻倍"
+                castle_msg = "[浪漫城堡]云崎早！你只爱粽子盲盒！你不爱我了呜呜呜呜呜"
                 await reply_queue.put((YQZ_ID, castle_msg))
                 add_log(f"[盲盒姬] castle")
 
@@ -251,8 +252,17 @@ async def danmu_egg():
 '''
     
 
-async def gift_egg(uid, uname, gift_name, num, profit):
-    pass
+async def gift_egg(uid, uname, gift_name, num, single_battery):
+    async def admin_egg(uid, gift_name):
+        # 卡米的一百天彩蛋
+        if uid == ADMIN_ID and gift_name == "为你摘星":
+            admin_egg_msg1 = "[卡米] 云宝，一百天快乐。"
+            admin_egg_msg2 = "[卡米] 送你一颗星星，让它在每一个我不在的夜晚，替我陪着你。"
+            await reply_queue.put((YQZ_ID, admin_egg_msg1))
+            await reply_queue.put((YQZ_ID, admin_egg_msg2))
+            add_log("[礼物姬] admin_egg")
+
+    await admin_egg(uid, gift_name)
 
 async def sc_egg(uid, uname, battery, message):
     async def shennai(uid, message):
@@ -266,8 +276,7 @@ async def sc_egg(uid, uname, battery, message):
     
     await shennai(uid, message)
 
-
-async def guard_egg(uid, uname, guard_name, price):
+async def guard_egg(uid, uname, guard_name, price, cnt):
     async def shuangshui(uid):
         if uid == SHUANGSHUI_ID:
             await reply_queue.put((uid, "[礼物姬]爽睡你的19级牌子不要了喵？"))

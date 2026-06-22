@@ -3,6 +3,8 @@ import random
 import time
 import aiohttp
 from logger import add_log
+import requests
+import subprocess, sys
 
 from memory_store import *
 from data import SESSDATA, BILI_JCT, BUVID3
@@ -54,3 +56,32 @@ async def send_reply(room_id, content, reply_uid=None):
                     pass
     except Exception as e:
         add_log(f"[ERROR] Network layer error: {e}")
+
+async def name_to_uid(name, sessdata, bili_jct, buvid3):
+    url = "https://api.bilibili.com/x/polymer/web-dynamic/v1/name-to-uid"
+    params = {"names": name}
+    
+    cookies = {
+        "SESSDATA": sessdata,
+        "bili_jct": bili_jct,
+        "buvid3": buvid3,
+    }
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://t.bilibili.com/",
+    }
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, params=params, cookies=cookies, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                data = await resp.json()
+                
+                if data.get("code") == 0:
+                    uid_list = data.get("data", {}).get("uid_list", [])
+                    if uid_list:
+                        return int(uid_list[0].get("uid"))
+    except Exception as e:
+        add_log(f"[ERROR] name_to_uid failed: {e}")
+    
+    return None

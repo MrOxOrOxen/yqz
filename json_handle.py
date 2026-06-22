@@ -3,7 +3,6 @@ from memory_store import *
 from logger import add_log, log_buffer
 
 def load_json_files():
-    global interact_cache
     json_map = {
         "files/box.json": ("box", MEMORY),
         "files/gift.json": ("gift", MEMORY),
@@ -22,6 +21,7 @@ def load_json_files():
         try:
             with open(meta_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
+                MEMORY["meta"]["live_time"] = data.get("live_time", 0)
                 MEMORY["meta"]["total_battery"] = data.get("total_battery", 0)
                 # MEMORY["meta"]["total_danmu_cnt_from_start"] = data.get("total_danmu_cnt_from_start", 0)
                 MEMORY["meta"]["total_danmu_cnt_from_start"] = data.get("total_danmu_cnt_from_start", 0)
@@ -39,6 +39,7 @@ def load_json_files():
             add_log(f"[ERROR] Error when reading meta.json: {e}")
             MEMORY["meta"]["total_battery"] = 0
     else:
+        MEMORY["meta"]["live_time"] = 0
         MEMORY["meta"]["total_battery"] = 0
         add_log("No meta.json. Total battery starts with 0")
         MEMORY["meta"]["next_threshold"] = random.randint(4000, 5000)
@@ -48,16 +49,18 @@ def load_json_files():
         try:
             with open(audience_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                MEMORY["audience"] = data
-                # MEMORY["audience"]["interact_cache"] = data.get("interact_cache", [])
+                MEMORY["audience"] = {
+                    "total_audience": data.get("total_audience", 0),
+                    "interact_cache": data.get("interact_cache", [])
+                }
                 interact_cache.clear()
-                interact_cache = set(data.get("interact_cache", []))
+                interact_cache.update(data.get("interact_cache", []))
                 add_log(f"Loaded interact_cache with {len(interact_cache)} entries.")
         except Exception as e:
             add_log(f"[ERROR] Error when reading audience.json: {e}")
 
     else:
-        MEMORY["audience"] = {"interact_cache": []}
+        MEMORY["audience"] = {"total_audience": 0, "interact_cache": []}
         interact_cache.clear()
         save_json("files/audience.json", MEMORY["audience"])
         add_log("No audience.json. Total audience starts with 0")
