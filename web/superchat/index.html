@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperChat记录姬</title>
+    <style>
+        :root {
+            --primary-color: #2e7d32;
+            --bg-color: #000000;
+            --card-bg: rgba(20, 20, 20, 0.8);
+            --text-main: #ffffff;
+            --text-dim: #8c8c8c;
+            --accent-color: #81c784;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 550px;
+            margin-top: 40px;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        h1 {
+            text-align: center;
+            letter-spacing: 2px;
+            background: linear-gradient(to right, #fff, var(--text-main));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.2rem;
+            margin-bottom: 5px;
+        }
+
+        .status-bar {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-bottom: 28px;
+        }
+
+        .sc-list {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .sc-card {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            padding: 15px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            transition: background 0.2s ease;
+        }
+
+        .sc-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .sc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2px;
+        }
+
+        .sc-name {
+            font-size: 1.1rem;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .sc-battery {
+            font-family: 'PingFang SC', 'Segoe UI', sans-serif;
+            color: var(--accent-color);
+            font-weight: 600;
+            font-size: 1.1rem;
+            white-space: nowrap;
+            text-align: right;
+            min-width: 70px;
+            flex-shrink: 0;
+        }
+
+        .sc-time {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+        }
+
+        .sc-content {
+            font-size: 0.8rem;
+            color: var(--accent-color);
+            line-height: 1.4;
+            word-break: break-all;
+            margin-top: 6px;
+        }
+
+        .sc-empty {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-dim);
+        }
+
+        .rank {
+            font-family: 'PingFang SC', 'Segoe UI', sans-serif;
+            font-weight: bold;
+            font-size: 1.1rem;
+            width: 45px;
+            text-align: left;
+            color: var(--text-dim);
+            margin-top: 2px;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .sc-body {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>SuperChat记录姬</h1>
+        <div class="status-bar" id="status">同步中...</div>
+
+        <div class="sc-list" id="sc-list">
+            <div class="sc-empty">还没有SuperChat</div>
+        </div>
+
+        <div style="text-align:center; margin-top:30px; color:#8c8c8c; font-size:11px;">
+            <p>Copyright © 2026 云崎早_haya & 晚安卡米宝宝</p>
+            <p>All rights reserved.</p>
+            <p>SuperChat data will be refreshed at UTC 23:59 every day.</p>
+            <p>
+                <a href="https://beian.miit.gov.cn" style="color:#8c8c8c; font-size:11px; text-decoration:none;">浙ICP备2026029714号-2</a>
+            </p>
+            <p style="text-align:center; color:#8c8c8c; font-size:11px; margin:0;">
+                <img src="/beian.png" style="width:12px; height:12px; vertical-align:middle;">
+                <a href="https://beian.mps.gov.cn/#/query/webSearch?code=21130202000488" rel="noreferrer" target="_blank" style="color:#8c8c8c; font-size:11px; text-decoration:none;">辽公网安备21130202000488号</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const DATA_URL = "/superchat";
+
+        function fmtTime(ts) {
+            if (!ts) return "";
+            const d = new Date(ts * 1000);
+            const pad = n => String(n).padStart(2, "0");
+            return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
+
+        function getColorByBattery(battery) {
+            const val = Number(battery) || 0;
+            if (val >= 20000) return "#ff2a4b";
+            if (val >= 10000) return "#e54d4d";
+            if (val >= 5000)  return "#e09443";
+            if (val >= 1000)  return "#e2b52b";
+            if (val >= 500)   return "#5caedb";
+            return "#4a8aff";
+        }
+
+        async function updateData() {
+            const container = document.getElementById("sc-list");
+            const statusElement = document.getElementById("status");
+
+            try {
+                const response = await fetch(DATA_URL, { cache: "no-cache" });
+                if (!response.ok) throw new Error(`服务器响应异常: ${response.status}`);
+
+                const resJson = await response.json();
+                const dataList = resJson.list || [];
+
+                statusElement.innerText = `最后更新: ${new Date().toLocaleTimeString()}（自动同步中）`;
+                statusElement.style.color = "var(--text-dim)";
+
+                if (!Array.isArray(dataList) || dataList.length === 0) {
+                    container.innerHTML = '<div class="sc-empty">还没有SuperChat</div>';
+                    return;
+                }
+
+                container.innerHTML = dataList.map((item, index) => {
+                    const dynamicColor = getColorByBattery(item.battery);
+                    return `
+                        <div class="sc-card">
+                            <div class="rank">${index + 1}</div>
+                            <div class="sc-body">
+                                <div class="sc-header">
+                                    <div class="sc-name">${item.uname || "未知用户"}</div>
+                                    <div class="sc-battery" style="color: ${dynamicColor};">${item.battery || 0}</div>
+                                </div>
+                                <div class="sc-time">${fmtTime(item.time)}</div>
+                                <div class="sc-content" style="color: ${dynamicColor};">${item.content || ""}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+
+            } catch (error) {
+                console.error("Update Error:", error);
+                statusElement.innerText = "同步失败：无法连接到数据接口";
+                statusElement.style.color = "#ff4d4f";
+            }
+        }
+
+        updateData();
+        setInterval(updateData, 10000);
+    </script>
+</body>
+</html>

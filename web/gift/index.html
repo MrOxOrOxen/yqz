@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云宝的电池计数器</title>
+    <style>
+        :root {
+            --primary-color: #2e7d32;
+            --bg-color: #000000;
+            --card-bg: rgba(20, 20, 20, 0.8);
+            --text-main: #ffffff;
+            --text-dim: #8c8c8c;
+            --accent-color: #81c784;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 550px;
+            margin-top: 40px;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        h1 {
+            text-align: center;
+            letter-spacing: 2px;
+            background: linear-gradient(to right, #fff, var(--primary-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.2rem;
+            margin-bottom: 5px;
+        }
+
+        .status-bar {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-bottom: 28px;
+        }
+
+        .leaderboard {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .row {
+            display: flex;
+            align-items: flex-start;
+            padding: 15px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            transition: background 0.2s ease;
+        }
+
+        .row:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .rank {
+            font-family: 'PingFang SC', 'Segoe UI', sans-serif;
+            font-weight: bold;
+            font-size: 1.1rem;
+            width: 45px;
+            text-align: left;
+            color: var(--text-dim);
+            margin-top: 2px;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .name-group {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding-right: 10px;
+        }
+
+        .name {
+            font-size: 1.1rem;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .detail-list {
+            font-size: 0.8rem;
+            color: var(--accent-color);
+            margin-top: 6px;
+            line-height: 1.4;
+            word-break: break-all;
+        }
+
+        .battery {
+            font-family: 'PingFang SC', 'Segoe UI', sans-serif;
+            color: var(--accent-color);
+            font-weight: 600;
+            font-size: 1.1rem;
+            white-space: nowrap;
+            text-align: right;
+            min-width: 70px;
+            flex-shrink: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>云宝的电池计数器</h1>
+        <div class="status-bar" id="status">同步中...</div>
+        
+        <div class="leaderboard" id="leaderboard">
+            </div>
+
+        <div style="text-align:center; margin-top:30px; color:#8c8c8c; font-size:11px;">
+            <p>Copyright © 2026 云崎早_haya & 晚安卡米宝宝</p>
+            <p>All rights reserved.</p>
+            <p>Battery data will be refreshed at UTC 23:59 every day.</p>
+            <p style="text-align:center; color:#8c8c8c; font-size:11px; margin:0;">
+            <p>
+                <a href="https://beian.miit.gov.cn" style="color:#8c8c8c; font-size:11px; text-decoration:none;">浙ICP备2026029714号-2</a>
+            </p>
+            <p style="text-align:center; color:#8c8c8c; font-size:11px; margin:0;">
+                <img src="/beian.png" style="width:12px; height:12px; vertical-align:middle;">
+                <!--<a href="https://beian.mps.gov.cn/#/query/webSearch?code=33010602014571" rel="noreferrer" target="_blank" style="color:#8c8c8c; font-size:11px; text-decoration:none;">浙公网安备33010602014571号</a>-->
+                <a href="https://beian.mps.gov.cn/#/query/webSearch?code=21130202000488" rel="noreferrer" target="_blank" style="color:#8c8c8c; font-size:11px; text-decoration:none;">辽公网安备21130202000488号</a>
+            </p>
+            <br>
+        </div>
+    </div>
+
+    <script>
+        const DATA_URL = "/data";
+        async function updateData() {
+            const container = document.getElementById('leaderboard');
+            const statusElement = document.getElementById('status');
+
+            try {
+                const response = await fetch(DATA_URL, { cache: "no-cache" });
+                
+                if (!response.ok) {
+                    throw new Error(`服务器响应异常: ${response.status}`);
+                }
+
+                const resJson = await response.json();
+
+                const isNormal = resJson.status === 1; 
+                const dataList = resJson.list || [];
+
+                switch (resJson.status) {
+                    case 0:
+                        statusElement.innerText = `最后更新: ${new Date().toLocaleTimeString()}（自动同步中）\n睡觉睡觉！晚安晚安！`;
+                        statusElement.style.color = "#8c8c8c";
+                        break;
+                    case 1:
+                        statusElement.innerText = `最后更新: ${new Date().toLocaleTimeString()}（自动同步中）`;
+                        statusElement.style.color = "#8c8c8c";
+                        break;
+                    case 2:
+                        statusElement.innerText = `卡米宝宝调试代码中，非真实数据`;
+                        statusElement.style.color = "#8c8c8c";
+                        break;
+                    case 3:
+                        statusElement.innerText = `最后更新: ${new Date().toLocaleTimeString()}（自动同步中）\n明天一整天都在路上，数据和录播后天传哈\n卡米要暂时离开了，你一定一定要等卡米回来哦`;
+                        statusElement.style.color = "#8c8c8c";
+                        break;
+                    default:
+                        statusElement.innerText = `ERROR: unknown status`;
+                        statusElement.style.color = "#ff4d4f";
+                        break;
+                }
+
+                if (!Array.isArray(dataList) || dataList.length === 0) {
+                    container.innerHTML = '<div style="text-align:center;padding:40px;color:#8c8c8c;">还没有礼物</div>';
+                    return;
+                }
+
+                container.innerHTML = dataList.map((user, index) => {
+                    let giftDetails = Object.entries(user.gift_list || {})
+                        .map(([name, count]) => `${name} x${count}`)
+                        .join(' / ') || "暂无详情";
+
+                    const isLow = (user.profit || 0) < 10;
+                    const dimNameColor = isLow ? '#8c8c8c': '';
+                    const dimColor = isLow ? '#196f3d' : '';
+
+                    return `
+                        <div class="row">
+                            <div class="rank">${index + 1}</div>
+                            <div class="name-group">
+                                <div class="name" style="color: ${dimNameColor}">${user.uname || '未知用户'}</div>
+                                <div class="detail-list" style="color: ${dimColor}">${giftDetails}</div>
+                            </div>
+                            <div class="battery" style="color: ${dimColor}">${(user.profit || 0).toFixed(0)}</div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error("Update Error:", error);
+                statusElement.innerText = "同步失败：无法连接到数据接口";
+                statusElement.style.color = "#ff4d4f";
+            }
+        }
+
+        updateData();
+        setInterval(updateData, 10000);
+    </script>
+</body>
+</html>
