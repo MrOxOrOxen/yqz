@@ -22,15 +22,17 @@ import signal, atexit, traceback
 from ids import *
 from logger import add_log, log_buffer
 from memory_store import *
+from constants import *
 from json_handle import load_json_files, save_json, append_to_jsonl
 from send_reply import reply_worker, name_to_uid
 from box_bot import call_box, call_all_box, call_at_box, call_month_box, call_month_all_box, call_month_at_box
-import gift_bot
-from gift_bot import get_gift_reply, handle_thank_reply, handle_total_gift_reply, thank_gift, call_at_gift, call_gift
-import eggs
-from eggs import danmu_egg, check_gachi_egg, box_egg, gift_egg, check_global_loss_warning, guard_egg, sc_egg
 from qq_bot import QQBot, dynamic_monitor
 from mail import send_email
+
+import gift_bot
+from gift_bot import *
+import eggs
+from eggs import *
 from hotreload_config import HOT_RELOAD_CONFIG
 
 # request_settings.set("impersonate", "chrome131")
@@ -58,8 +60,34 @@ def check_hot_reload():
             for func_name in state['functions']:
                 if hasattr(mod, func_name):
                     g[func_name] = getattr(mod, func_name)
+            
+            # constant
+            constants_to_update = state.get('constants', [])
+            if constants_to_update:
+                new_values = {name: getattr(mod, name) for name in constants_to_update if hasattr(mod, name)}
+            
+                for name, val in new_values.items():
+                    g[name] = val
+                
+                for other_mod_name, other_mod in sys.modules.items():
+                    if not other_mod_name or other_mod_name == '__main__':
+                        continue
+                    if other_mod is None:
+                        continue
+                    
+                    for name, val in new_values.items():
+                        if hasattr(other_mod, name):
+                            try:
+                                setattr(other_mod, name, val)
+                            except (AttributeError, TypeError):
+                                pass
+                
+                add_log(f"[HOT RELOAD] {filename} updated ({len(state['functions'])} funcs, {len(constants_to_update)} consts)")
+            else:
+                add_log(f"[HOT RELOAD] {filename} updated ({len(state['functions'])} funcs)")
+            
             state['mtime'] = current_mtime
-            add_log(f"[HOT RELOAD] {filename} updated")
+            
         except Exception as e:
             add_log(f"[HOT RELOAD ERROR] {filename}: {e}")
 
@@ -140,15 +168,30 @@ def update_gift_summary(uid, uname, gift_name, num, battery):
         user["gift_list"][gift_name] = user["gift_list"].get(gift_name, 0) + num
 
 def update_box_summary(uid, uname, count, cost, profit, original_box_name):
+    original_box_name = BOX_MEMORY_MAP.get(original_box_name, original_box_name)
     uid_str = str(uid)
     if uid_str not in MEMORY["box"]:
-        MEMORY["box"][uid_str] = {"uid": int(uid), "uname": uname, "count": 0, "cost": 0, "profit": 0, "info": {}, "is_personal_loss_egg_sent": False}
+        MEMORY["box"][uid_str] = {
+            "uid": int(uid),
+            "uname": uname,
+            "count": 0,
+            "cost": 0,
+            "profit": 0,
+            "info": {},
+            "cost_detail": {},
+            "profit_detail": {},
+            "is_personal_loss_egg_sent": False
+        }
     user = MEMORY["box"][uid_str]
     user["uname"] = uname
     user["count"] += count
     user["cost"] += cost
     user["profit"] += profit
     user["info"][original_box_name] = user["info"].get(original_box_name, 0) + count
+    user.setdefault("cost_detail", {})
+    user.setdefault("profit_detail", {})
+    user["cost_detail"][original_box_name] = user["cost_detail"].get(original_box_name, 0.0) + cost
+    user["profit_detail"][original_box_name] = user["profit_detail"].get(original_box_name, 0.0) + profit
 
 # 大航海特殊判断
 async def record_to_guard_log(uid, uname, price, guard_level, start_time, source="GUARD"):
@@ -164,9 +207,23 @@ async def record_to_guard_log(uid, uname, price, guard_level, start_time, source
 
     cnt, _, _ = calc_guard_combo(guard_name, price)
 
+    if guard_name == "舰长":
+        if price == 198: guard_name = "舰长*3天"
+        elif price == 330: guard_name = "舰长*5天"
+        elif price == 528: guard_name = "舰长*8天"
+    elif guard_name == "提督":
+        if price == 1998: guard_name = "提督*3天"
+        elif price == 6660: guard_name = "提督*10天"
+    elif guard_name == "总督":
+        if price == 33330: guard_name = "总督*5天"
+
     processed_records.append((uid, start_time))
     if len(processed_records) > 200: processed_records.pop(0)
     
+    if guard_name in ["舰长*3天", "舰长*5天", "舰长*8天", "提督*3天", "提督*10天", "总督*5天"]:
+        update_box_summary(uid, uname, 1, 500, price, "大航海盲盒")
+        save_json("files/box.json", MEMORY["box"])
+        await check_global_loss_warning(uid, uname)
     update_gift_summary(uid, uname, guard_name, cnt, price)
     update_all_log(uid, uname, guard_name, price)
     add_log(f"[{source}] {uname} {guard_name}x{cnt} ({price} 电池)")
@@ -179,6 +236,7 @@ async def record_to_guard_log(uid, uname, price, guard_level, start_time, source
     save_json("files/meta.json", MEMORY["meta"])
     await handle_total_gift_reply(YQZ_ID, MEMORY["meta"]["total_battery"])
     check_hot_reload()
+    await huli_egg(uid, guard_name)
     await guard_egg(uid, uname, guard_name, price, cnt)
     await check_gachi_egg(uid, guard_name, price)
 
@@ -232,27 +290,60 @@ async def periodic_tasks():
 # 监听
 room = live.LiveDanmaku(ROOM_ID, credential=credential)
 
+box_names_pattern = '|'.join(re.escape(name) for name in BOX_NAME_LIST)
+
 @room.on('DANMU_MSG')
 async def on_danmaku(event):
     global LIVE_STATUS
     data = event['data']['info']
     msg, uid, uname = data[1], data[2][0], data[2][1]
     
+    '''
     if msg == "呼叫礼物姬":
         await call_gift(uid, uname)
     elif "呼叫礼物姬@" in msg:
         await call_at_gift(uid, uname, msg)
-    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意)?盲盒姬总部$', msg):
+    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬总部$', msg):
         await call_month_all_box(uid, uname, msg)
-    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意)?盲盒姬@(\d+)$', msg):
+    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬@(\d+)$', msg):
         await call_month_at_box(uid, uname, msg)
-    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意)?盲盒姬$', msg):
+    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬$', msg):
         await call_month_box(uid, uname, msg)
-    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意)?盲盒姬总部$', msg):
+    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬总部$', msg):
         await call_all_box(uid, uname, msg)
-    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意)?盲盒姬@(\d+)$', msg):
+    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬@(\d+)$', msg):
         await call_at_box(uid, uname, msg)
-    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意)?盲盒姬$', msg):
+    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬$', msg):
+        await call_box(uid, uname, msg)
+    '''
+
+    if msg == "呼叫礼物姬":
+        await call_gift(uid, uname)
+    elif "呼叫礼物姬@" in msg:
+        await call_at_gift(uid, uname, msg)
+    
+    # 月度全局盲盒姬
+    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:{box_names_pattern})?盲盒姬总部$', msg):
+        await call_month_all_box(uid, uname, msg)
+    
+    # 指定uid月度盲盒姬
+    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:{box_names_pattern})?盲盒姬@(\d+)$', msg):
+        await call_month_at_box(uid, uname, msg)
+    
+    # 月度盲盒姬
+    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:{box_names_pattern})?盲盒姬$', msg):
+        await call_month_box(uid, uname, msg)
+    
+    # 全局盲盒姬
+    elif re.search(rf'^呼叫(?:{box_names_pattern})?盲盒姬总部$', msg):
+        await call_all_box(uid, uname, msg)
+    
+    # 指定uid盲盒姬
+    elif re.search(rf'^呼叫(?:{box_names_pattern})?盲盒姬@(\d+)$', msg):
+        await call_at_box(uid, uname, msg)
+    
+    # 盲盒姬
+    elif re.search(rf'^呼叫(?:{box_names_pattern})?盲盒姬$', msg):
         await call_box(uid, uname, msg)
 
     if LIVE_STATUS == 1:
@@ -283,6 +374,7 @@ async def on_gift(event):
 
         check_hot_reload()
         await box_egg(uid, uname, gift_name, num, bg_cost_battery, g_profit_battery)
+        await huli_egg(uid, gift_name)
         await check_gachi_egg(uid, None, g_profit_battery)
         await check_global_loss_warning(uid, uname)
 
@@ -327,6 +419,7 @@ async def on_gift(event):
         MEMORY["meta"]["total_battery"] += battery
         check_hot_reload()
         await gift_egg(uid, uname, gift_name, num, single_battery)
+        await huli_egg(uid, gift_name)
         await handle_total_gift_reply(YQZ_ID, MEMORY["meta"]["total_battery"])
         await check_gachi_egg(uid, None, single_battery)
 
@@ -347,6 +440,14 @@ async def on_sc(event):
     if len(processed_sc_records) > 10:
         processed_sc_records.pop(0)
 
+    append_to_jsonl("files/superchat.jsonl", [{
+        "uid": uid,
+        "uname": uname,
+        "time": start_time,
+        "battery": battery,
+        "content": content
+    }])
+
     update_gift_summary(uid, uname, "SuperChat", 1, battery)
     update_all_log(uid, uname, "SuperChat", battery)
     add_log(f"[SuperChat] {uname} ({price}元)")
@@ -358,6 +459,7 @@ async def on_sc(event):
     MEMORY["meta"]["total_battery"] += battery
     await handle_total_gift_reply(YQZ_ID, MEMORY["meta"]["total_battery"])
     check_hot_reload()
+    await huli_egg(uid, "SuperChat")
     await sc_egg(uid, uname, battery, content)
     await check_gachi_egg(uid, None, battery)
 
@@ -438,7 +540,7 @@ async def interact_word(event):
 
     elif uid == ASPK_ID:
         reply = f"[欢迎姬]欢迎帅神！！"
-    elif medal:
+    elif medal and uid not in REFUSE_WELCOME_LIST:
         medal_name = medal.get('name', None)
         medal_level = medal.get('level', 0)
         if medal_name == "早崎鸭":
@@ -487,8 +589,10 @@ async def on_common_notice_danmaku(event):
 
     content_segments = data.get('content_segments', [])
     
-    if len(content_segments) > 1 and content_segments[1].get('text', '') == "投喂":
+    if content_segments[1].get('text', '') == "投喂":
         uname, gift_name = content_segments[0]['text'], content_segments[2]['text']
+        if gift_name == "大航海盲盒":
+             return
         try:
             uid = await name_to_uid(uname, SESSDATA, BILI_JCT, BUVID3) or None
         except Exception as e:
@@ -522,19 +626,20 @@ async def on_common_notice_danmaku(event):
                         "gift_name": gift_name
                     }
                     json.dump(to_dump, ff, ensure_ascii=False, indent=2)
-                    f.write('\n')
+                    ff.write('\n')
                 return
 
         update_gift_summary(uid, uname, gift_name, 1, gift_value)
         update_all_log(uid, uname, gift_name, gift_value)
         add_log(f"[礼物 (COMMON_NOTICE_DANMAKU)] {uname} {gift_name} ({gift_value:.1f} 电池)")
-        
+
         if gift_value >= 1000:
             reply = thank_gift(uid, uname, gift_name, gift_value)
             if reply:
                 await handle_thank_reply(uid, uname, reply)
         MEMORY['meta']['total_battery'] += gift_value
         check_hot_reload()
+        await huli_egg(uid, gift_name)
         await handle_total_gift_reply(YQZ_ID, MEMORY["meta"]["total_battery"])
         await check_gachi_egg(uid, None, gift_value)
 
@@ -548,41 +653,50 @@ async def on_live(event):
     if live_timestamp - MEMORY["meta"]["live_time"] <= 5:
         return
     MEMORY["meta"]["live_time"] = live_timestamp
-    save_json("files/meta.json", MEMORY["meta"])
-    if not qq:
-        return
-    title = ""
+    # save_json("files/meta.json", MEMORY["meta"])
+
+    title = MEMORY["meta"].get("title", "")
+    room_data = {}
     try:
         room_info = live.LiveRoom(ROOM_ID)
         info = await room_info.get_room_info()
         room_data = info.get("room_info", {})
         title = room_data.get("title", "")
-        
+        MEMORY["meta"]["title"] = title
+    except Exception as e:
+        add_log(f"[ERROR] 获取直播间标题失败: {e}")
+    
+    save_json("files/meta.json", MEMORY["meta"])
+
+    if not qq:
+        return
+
+    try:    
         cover = room_data.get("cover", "")
         segments = [
             {"type": "text", "data": {"text": "【推送姬】开播提醒\n云崎早_haya开播啦！\n"}},
         ]
-
         if cover:
             segments.append({"type": "image", "data": {"file": cover}})
             segments.append({"type": "text", "data": {"text": "\n"}})
-
         segments.append({
             "type": "text",
             "data": {"text": f"标题：{title}\n房间号：27885573\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！"}
         })
 
-        if qq:
-            await qq.send_mixed(segments, at_all=True)
+        await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
+        await asyncio.sleep(5)
+        await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
 
-    except Exception as e:
-        add_log(f"[推送姬] 开播获取封面失败，发送纯文本开播消息")
+    except Exception:
         segments = [{
             "type": "text",
             "data": {"text": f"【推送姬】开播提醒\n云崎早_haya开播啦！\n标题：{title}\n房间号：27885573\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！"}
         }]
-        if qq:
-            await qq.send_mixed(segments, at_all=True)
+
+        await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
+        await asyncio.sleep(5)
+        await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
 
     try:
         process = subprocess.Popen(
@@ -615,11 +729,14 @@ async def on_preparing(event):
         else:
             time_length = f"{live_hours}小时{live_mins}分钟"
 
-        await qq.text(f"【推送姬】下播提醒\n云崎早_haya下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True)
+        await qq.text(f"【推送姬】下播提醒\n云崎早_haya下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP)
+        await asyncio.sleep(5)
+        await qq.text(f"【推送姬】下播提醒\n云崎早_haya下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP_FANS)
         add_log("[推送姬] 下播提醒")
 
     await asyncio.sleep(5)
-    await send_email(live_start_time, prepare_time, time_length)
+    title = MEMORY["meta"]["title"] or "天！才！主！播！"
+    await send_email(live_start_time, prepare_time, time_length, title)
 
 '''
 @room.on('SUPER_CHAT_MESSAGE_JPN')
@@ -925,6 +1042,29 @@ def get_data():
         "list": leaderboard
     }
 
+@app.get("/superchat")
+def get_superchat():
+    data = []
+    if os.path.exists("files/superchat.jsonl"):
+        with open("files/superchat.jsonl", "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                    if isinstance(obj, list):
+                        data.extend(obj)
+                    else:
+                        data.append(obj)
+                except json.JSONDecodeError:
+                    continue
+    data.sort(key=lambda x: x.get("time", 0), reverse=True)
+    return {
+        "status": STATUS,
+        "list": data
+    }
+
 #### 热更新辅助函数
 def _update_meta_gear(profit):
     next_t = MEMORY["meta"]["next_threshold"]
@@ -972,18 +1112,17 @@ def _rollback_meta_gear(profit):
         add_log(f"[HOT GEAR ROLLBACK] gear={gear}, next_threshold={next_t}")
 
 
-#### 热更新
+#### 热更新，gift_price, blind_cost, blind_profit传单个成本与收益电池数
 class HotGiftInput(BaseModel):
     uid: int
     uname: str
     gift_name: str
     gift_price: int
     timestamp: int
+    count: int
     is_blind_box: bool = False
     blind_cost: Optional[float] = None
-    blind_profit: Optional[float] = None
     original_box_name: Optional[str] = None
-    blind_count: Optional[int] = None
 @app.post("/api/hot_gift")
 def api_hot_gift(data: HotGiftInput):
     '''
@@ -995,51 +1134,52 @@ def api_hot_gift(data: HotGiftInput):
         "gift_name": ,
         "gift_price": ,
         "timestamp": ,
+        "count": ,
         "is_blind_box": ,
         "blind_cost": ,
-        "blind_profit": ,
-        "original_box_name": ,
-        "blind_count": 
+        "original_box_name": 
       }'
     '''
     uid_str = str(data.uid)
+    total_price = data.gift_price * data.count
 
     if uid_str in MEMORY["gift"]:
         if data.gift_name in MEMORY["gift"][uid_str]["gift_list"]:
-            MEMORY["gift"][uid_str]["gift_list"][data.gift_name] += 1
+            MEMORY["gift"][uid_str]["gift_list"][data.gift_name] += data.count
         else:
-            MEMORY["gift"][uid_str]["gift_list"][data.gift_name] = 1
-        MEMORY["gift"][uid_str]["profit"] += data.gift_price
+            MEMORY["gift"][uid_str]["gift_list"][data.gift_name] = data.count
+        MEMORY["gift"][uid_str]["profit"] += total_price
     else:
         MEMORY["gift"][uid_str] = {
             "uid": data.uid,
             "uname": data.uname,
-            "gift_list": {data.gift_name: 1},
-            "profit": data.gift_price
+            "gift_list": {data.gift_name: data.count},
+            "profit": total_price
         }
 
-    MEMORY["all"].append({
-        "uid": data.uid,
-        "uname": data.uname,
-        "time": data.timestamp,
-        "gift_name": data.gift_name,
-        "gift_price": data.gift_price
-    })
+    for _ in range(data.count):
+        MEMORY["all"].append({
+            "uid": data.uid,
+            "uname": data.uname,
+            "time": data.timestamp,
+            "gift_name": data.gift_name,
+            "gift_price": data.gift_price
+        })
 
     if data.is_blind_box:
-        profit = data.blind_profit if data.blind_profit is not None else data.gift_price
-        cost = data.blind_cost
-        count = data.blind_count
+        profit = data.gift_price
+        cost = data.blind_cost if data.blind_cost is not None else 0.0
+        count = data.count
         box_name = data.original_box_name or data.gift_name
-        update_box_summary(data.uid, data.uname, count, cost, profit, box_name)
+        update_box_summary(data.uid, data.uname, count, cost*count, profit*count, box_name)
         save_json("files/box.json", MEMORY["box"])
 
-    MEMORY["meta"]["total_battery"] += data.gift_price
+    MEMORY["meta"]["total_battery"] += total_price
     _update_meta_gear(MEMORY["meta"]["total_battery"])
     save_json("files/meta.json", MEMORY["meta"])
 
     log_suffix = f" [HOT UPDATE (BOX)] {box_name}x{count}]" if data.is_blind_box else ""
-    add_log(f"[HOT UPDATE] {data.uname}: {data.gift_name}" + log_suffix)
+    add_log(f"[HOT UPDATE] {data.uname}: {data.gift_name} x {data.count}" + log_suffix)
     return {"status": "success", "message": "Hot update inject completed."}
 
 # 热删除
@@ -1049,12 +1189,11 @@ class DeleteSpecificGiftInput(BaseModel):
     gift_name: str
     gift_price: Union[int, float]
     timestamp: int
+    count: int
     is_blind_box: bool = False
-    original_box_name: Optional[str] = None
     blind_cost: Optional[float] = None
-    blind_profit: Optional[float] = None
-    blind_count: Optional[int] = None
-
+    original_box_name: Optional[str] = None
+    
 @app.post("/api/delete_specific_gift")
 def api_delete_specific_gift(data: DeleteSpecificGiftInput):
     r"""
@@ -1066,16 +1205,15 @@ def api_delete_specific_gift(data: DeleteSpecificGiftInput):
         "gift_name": ,
         "gift_price": ,
         "timestamp": ,
+        "count": ,
         "is_blind_box": ,
         "blind_cost": ,
-        "blind_profit": ,
-        "original_box_name": ,
-        "blind_count": 
+        "original_box_name": 
       }'
     """
     uid_str = str(data.uid)
     
-    target_idx = None
+    target_indices = []
     for i, record in enumerate(MEMORY["all"]):
         rp = record.get("gift_price", 0)
         price_match = (rp == data.gift_price) or (isinstance(rp, (int, float)) and abs(rp - data.gift_price) < 0.01)
@@ -1084,25 +1222,31 @@ def api_delete_specific_gift(data: DeleteSpecificGiftInput):
             record.get("gift_name") == data.gift_name and
             price_match and
             record.get("time") == data.timestamp):
-            target_idx = i
-            break
+            target_indices.append(i)
+            if len(target_indices) >= data.count:
+                break
     
-    if target_idx is None:
-        return {"status": "not_found", "message": "未找到匹配的礼物记录，请检查参数"}
+    if len(target_indices) < data.count:
+        return {"status": "not_found", "message": f"仅找到{len(target_indices)}条记录，需要删除{data.count}条"}
     
-    deleted = MEMORY["all"].pop(target_idx)
-    actual_price = deleted.get("gift_price", 0)
+    deleted_records = []
+    for idx in reversed(target_indices):
+        deleted = MEMORY["all"].pop(idx)
+        deleted_records.append(deleted)
+    
+    actual_price = deleted_records[0].get("gift_price", 0)
+    total_deduct = actual_price * data.count
     
     if uid_str in MEMORY["gift"]:
         user_data = MEMORY["gift"][uid_str]
         current_profit = user_data.get("profit", 0)
         
-        new_profit = current_profit - actual_price
+        new_profit = current_profit - total_deduct
         user_data["profit"] = new_profit if new_profit > 0 else 0
         
         gift_list = user_data.get("gift_list", {})
         if data.gift_name in gift_list:
-            gift_list[data.gift_name] -= 1
+            gift_list[data.gift_name] -= data.count
             if gift_list[data.gift_name] <= 0:
                 del gift_list[data.gift_name]
         
@@ -1111,32 +1255,45 @@ def api_delete_specific_gift(data: DeleteSpecificGiftInput):
         else:
             user_data["gift_list"] = gift_list
 
-    if data.is_blind_box:
-        profit = data.blind_profit if data.blind_profit is not None else actual_price
-        cost = data.blind_cost
-        count = data.blind_count
-        box_name = data.original_box_name or data.gift_name
+        if data.is_blind_box:
+            profit = actual_price
+            cost = data.blind_cost if data.blind_cost is not None else 0.0
+            box_name = data.original_box_name or data.gift_name
+            box_name = BOX_MEMORY_MAP.get(box_name, box_name)
 
-        if uid_str in MEMORY["box"]:
-            box_user = MEMORY["box"][uid_str]
-            box_user["count"] = max(0, box_user.get("count", 0) - count)
-            box_user["cost"] = max(0, box_user.get("cost", 0) - cost)
-            box_user["profit"] = max(0, box_user.get("profit", 0) - profit)
+            if uid_str in MEMORY["box"]:
+                box_user = MEMORY["box"][uid_str]
+                box_user["count"] = max(0, box_user.get("count", 0) - data.count)
+                box_user["cost"] = max(0, box_user.get("cost", 0) - cost * data.count)
+                box_user["profit"] = max(0, box_user.get("profit", 0) - profit * data.count)
 
-            info = box_user.get("info", {})
-            if box_name in info:
-                info[box_name] -= count
-                if info[box_name] <= 0:
-                    del info[box_name]
-
-            if box_user["count"] <= 0 or not info:
-                del MEMORY["box"][uid_str]
-            else:
+                info = box_user.get("info", {})
+                if box_name in info:
+                    info[box_name] -= data.count
+                    if info[box_name] <= 0:
+                        del info[box_name]
                 box_user["info"] = info
-        
-        save_json("files/box.json", MEMORY["box"])
 
-    MEMORY["meta"]["total_battery"] -= actual_price
+                cost_detail = box_user.setdefault("cost_detail", {})
+                if box_name in cost_detail:
+                    cost_detail[box_name] -= cost * data.count
+                    if cost_detail[box_name] <= 0:
+                        del cost_detail[box_name]
+                box_user["cost_detail"] = cost_detail
+
+                profit_detail = box_user.setdefault("profit_detail", {})
+                if box_name in profit_detail:
+                    profit_detail[box_name] -= profit * data.count
+                    if profit_detail[box_name] <= 0:
+                        del profit_detail[box_name]
+                box_user["profit_detail"] = profit_detail
+
+                if box_user["count"] <= 0 or not box_user.get("info", {}):
+                    del MEMORY["box"][uid_str]
+            
+            save_json("files/box.json", MEMORY["box"])
+
+    MEMORY["meta"]["total_battery"] -= total_deduct
     if MEMORY["meta"]["total_battery"] < 0:
         MEMORY["meta"]["total_battery"] = 0
     _rollback_meta_gear(MEMORY["meta"]["total_battery"])
@@ -1145,12 +1302,13 @@ def api_delete_specific_gift(data: DeleteSpecificGiftInput):
     save_json("files/gift.json", MEMORY["gift"])
     save_json("files/meta.json", MEMORY["meta"])
     
-    add_log(f"[HOT DELETE]  {data.uname}({data.uid}) {data.gift_name}: "
-            f"battery:{actual_price}, time:{data.timestamp}")
+    add_log(f"[HOT DELETE] {data.uname}({data.uid}) {data.gift_name}x{data.count}: "
+            f"battery:{total_deduct}, time:{data.timestamp}")
     
     return {
         "status": "success",
-        "deleted_record": deleted,
+        "deleted_count": data.count,
+        "deleted_records": deleted_records,
         "gift_summary_remaining": MEMORY["gift"].get(uid_str, "该用户已无记录")
     }
 

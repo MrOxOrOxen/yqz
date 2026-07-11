@@ -7,6 +7,7 @@ import requests
 import subprocess, sys
 
 from memory_store import *
+from constants import *
 from data import SESSDATA, BILI_JCT, BUVID3
 
 async def reply_worker():

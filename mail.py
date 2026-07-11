@@ -1,7 +1,8 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
-from memory_store import email_password
+from memory_store import *
+from constants import *
 from logger import add_log
 
 EMAIL_CONFIG = {
@@ -13,13 +14,14 @@ EMAIL_CONFIG = {
     "enabled": True
 }
 
-async def send_email(live_start_time, live_end_time, duration_str):
+async def send_email(live_start_time, live_end_time, duration_str, title):
     if not EMAIL_CONFIG.get("enabled", False):
         return
     
     try:
         msg = MIMEText(
             f"""状态：PREPARING
+标题：{title}
 直播时间：{live_start_time} - {live_end_time}
 直播时长：{duration_str}
             """,

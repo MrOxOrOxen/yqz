@@ -1,5 +1,6 @@
 import json, os, random
 from memory_store import *
+from constants import *
 from logger import add_log, log_buffer
 
 def load_json_files():
@@ -33,6 +34,7 @@ def load_json_files():
                 MEMORY["meta"]["is_birthday_msg_sent"] = data.get("is_birthday_msg_sent", False)
                 MEMORY["meta"]["is_kfc_msg_sent"] = data.get("is_kfc_msg_sent", False)
                 MEMORY["meta"]["is_castle_msg_sent"] = data.get("is_castle_msg_sent", False)
+                MEMORY["meta"]["is_huli_egg_sent"] = data.get("is_huli_egg_sent", False)
                 add_log(f"Total battery from history file: {MEMORY['meta']['total_battery']}")
                 add_log(f"Next battery threshold: {MEMORY['meta']['next_threshold']}")
         except Exception as e:

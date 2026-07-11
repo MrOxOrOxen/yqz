@@ -1,6 +1,7 @@
 from ids import *
 import time
 from memory_store import *
+from constants import *
 from logger import add_log
 from datetime import datetime
 from json_handle import save_json
@@ -41,6 +42,22 @@ async def box_egg(uid, uname, gift_name, num, cost, profit):
     
     await huli_box(uid, num)
     await yqz_box(uid, num)
+
+async def huli_egg(uid, gift_name):
+    if uid != HULI_ID:
+        return
+    else:
+        if MEMORY["meta"]["is_huli_egg_sent"]:
+            return
+        try:
+            user_data = MEMORY["gift"].get(str(HULI_ID), {})
+            if user_data.get("profit", 0) > 1000 and gift_name != "总督":
+                await reply_queue.put((uid, "[礼物姬]狐狸，你的总督不要啦？？！！"))
+                add_log("[礼物姬] 狐狸又在送礼物")
+                MEMORY["meta"]["is_huli_egg_sent"] = True
+                save_json("files/meta.json", MEMORY["meta"])
+        except Exception:
+            return
 
 async def check_global_loss_warning(uid, uname):
     uid_str = str(uid)
@@ -142,7 +159,7 @@ async def danmu_egg(count=50):
             if total_count >= count:
                 MEMORY["meta"]["is_castle_msg_sent"] = True
                 save_json("files/meta.json", MEMORY["meta"])
-                castle_msg = "[浪漫城堡]云崎早！你只爱粽子盲盒！你不爱我了呜呜呜呜呜"
+                castle_msg = "[盲盒姬]今天星期五！戒赌所来开会啦！"
                 await reply_queue.put((YQZ_ID, castle_msg))
                 add_log(f"[盲盒姬] castle")
 
@@ -152,7 +169,7 @@ async def danmu_egg(count=50):
 
     await birthday()
     await kfc()
-    await castle()
+    # await castle()
     # await gachi_combo()
     # await question_mark_combo()
     # await circle_combo()
@@ -256,8 +273,8 @@ async def gift_egg(uid, uname, gift_name, num, single_battery):
     async def admin_egg(uid, gift_name):
         # 卡米的一百天彩蛋
         if uid == ADMIN_ID and gift_name == "为你摘星":
-            admin_egg_msg1 = "[卡米] 云宝，一百天快乐。"
-            admin_egg_msg2 = "[卡米] 送你一颗星星，让它在每一个我不在的夜晚，替我陪着你。"
+            admin_egg_msg1 = "[from 卡米] 云宝，一百天快乐。"
+            admin_egg_msg2 = "[from 卡米] 给你摘一颗星星，让它在每个我不在的夜晚，替我去爱你。"
             await reply_queue.put((YQZ_ID, admin_egg_msg1))
             await reply_queue.put((YQZ_ID, admin_egg_msg2))
             add_log("[礼物姬] admin_egg")
@@ -283,7 +300,7 @@ async def guard_egg(uid, uname, guard_name, price, cnt):
             add_log(f"[礼物姬] shuangshui")
 
     # 由于thank_guard中@的人不一样，需要单独列出
-    async def thank_guard(uid, uname, guard_name):
+    async def birthday_thank_guard(uid, uname, guard_name):
         if guard_name == "总督":
             if uid == GACHI_ID[3]:
                 reply = "[from 庄生梦方宜]云宝，生日快乐！你这么好，值得这世上所有温柔的对待！"
@@ -317,4 +334,4 @@ async def guard_egg(uid, uname, guard_name, price, cnt):
         add_log(f"[礼物姬]感谢{uname}的{guard_name}")
 
     await shuangshui(uid)
-    # await thank_guard(uid, uname, guard_name)
+    # await birthday_thank_guard(uid, uname, guard_name)

@@ -45,29 +45,25 @@ try:
 
     stats = {}
     for item in all_data:
-        # --- 关键修正点：匹配你抓取代码中的字段名 ---
-        # 抓取代码里用的是 'gift_price'，而不是 'battery'
-        # price = item.get('battery', 0) 
         price = item.get('gift_price', 0) 
-        
-        # 按分钟聚合数据
+
         period = (item['time'] // 60) * 60 
         stats[period] = stats.get(period, 0) + price
 
     if stats:
         sorted_keys = sorted(stats.keys())
-        times = [datetime.fromtimestamp(t) for t in sorted_keys]
-        counts = [stats[t] for t in sorted_keys]
+        min_time = sorted_keys[0]
+        max_time = sorted_keys[-1]
+        full_times = range(min_time, max_time + 60, 60)
+        times = [datetime.fromtimestamp(t) for t in full_times]
+        counts = [stats.get(t, 0) for t in full_times]
 
         plt.figure(figsize=(12, 6))
         
-        # 绘制平滑填充图
-        # 使用你最喜欢的粉色 (#ff85c0)
         plt.plot(times, counts, color='#ff85c0', linewidth=2.5, alpha=0.9, label='电池流水')
-        plt.fill_between(times, counts, color='#ff85c0', alpha=0.3) # 粉色半透明填充
+        plt.fill_between(times, counts, color='#ff85c0', alpha=0.3)
 
         ax = plt.gca()
-        # 设置横坐标时间显示，每 20 分钟一个刻度
         ax.xaxis.set_major_locator(mdates.MinuteLocator(byminute=range(0, 60, 20)))
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
@@ -170,14 +166,12 @@ except FileNotFoundError:
     print("Error: no box.json")
 
 # danmu.jsonl
-# --- danmu.jsonl 分析部分 ---
 folder_danmu = "analysis/danmu"
 os.makedirs(folder_danmu, exist_ok=True)
 total_danmu = 0
 
 try:
     danmu_list = []
-    # 逐行读取 jsonl 文件
     if os.path.exists('files/danmu.jsonl'):
         with open('files/danmu.jsonl', 'r', encoding='utf-8') as f:
             for line in f:
@@ -186,35 +180,35 @@ try:
                     total_danmu += 1
 
     if danmu_list:
-        # 1. 初始化计数容器（不使用 collections）
-        dm_stats = {}   # 用于折线图：{时间戳: 数量}
-        word_dict = {}  # 用于高频词：{词语: 数量}
+        dm_stats = {} # 用于折线图
+        word_dict = {} # 用于高频词
 
         
-        # 简单停用词
+        # 停用词
         stop_words = ["的", "了", "在", "是", "我", "你", "他", "吧", "吗", "啊", "这", "那", "不", "就"]
         for item in danmu_list:
-            # --- 统计弹幕频率 (折线图数据) ---
+            # 弹幕频率
             period = (item['time'] // 60) * 60
             dm_stats[period] = dm_stats.get(period, 0) + 1
             
-            # --- 统计词频 (柱状图数据) ---
+            # 词频
             words = jieba.lcut(item['danmu'])
             for w in words:
                 if len(w) > 1 and w not in stop_words:
-                    # 手动实现计数逻辑
                     if w in word_dict:
                         word_dict[w] += 1
                     else:
                         word_dict[w] = 1
 
-        # --- 绘图 A：弹幕频率折线图 (粉色填充) ---
+        # 弹幕频率折线图
         dm_sorted_keys = sorted(dm_stats.keys())
-        dm_times = [datetime.fromtimestamp(t) for t in dm_sorted_keys]
-        dm_counts = [dm_stats[t] for t in dm_sorted_keys]
+        dm_min_time = dm_sorted_keys[0]
+        dm_max_time = dm_sorted_keys[-1]
+        dm_full_times = range(dm_min_time, dm_max_time + 60, 60)
+        dm_times = [datetime.fromtimestamp(t) for t in dm_full_times]
+        dm_counts = [dm_stats.get(t, 0) for t in dm_full_times] 
 
         plt.figure(figsize=(12, 6))
-        # 使用你喜欢的粉色调 (#ff85c0)
         plt.plot(dm_times, dm_counts, color='#ff85c0', linewidth=2, alpha=0.8)
         plt.fill_between(dm_times, dm_counts, color='#ff85c0', alpha=0.3)
         
@@ -226,41 +220,13 @@ try:
         plt.tight_layout()
         plt.savefig(f'{folder_danmu}/{date}弹幕频率.png', dpi=300)
 
-        '''
-        # --- 绘图 B：手动提取 Top 10 高频词 ---
-        # 将字典转换为列表并排序
-        word_items = list(word_dict.items())
-        # 按出现次数(x[1])进行降序排列
-        word_items.sort(key=lambda x: x[1], reverse=True)
-        top_15 = word_items[:30]
-
-        if top_15:
-            words_top = [x[0] for x in top_15]
-            counts_top = [x[1] for x in top_15]
-
-            plt.figure(figsize=(15, 6))
-            bars = plt.bar(words_top, counts_top, color='#ff85c0', alpha=0.8)
-            plt.title(f'{date} 云宝直播间弹幕高频词排行')
-            plt.ylabel('频次')
-            
-            # 柱状图上方数值标注
-            for bar in bars:
-                height = bar.get_height()
-                plt.text(bar.get_x() + bar.get_width()/2., height,
-                         f'{int(height)}', ha='center', va='bottom')
-
-            plt.tight_layout()
-            plt.savefig(f'{folder_danmu}/{date}高频词图.png', dpi=300)
-            '''
-
         word_list = [{"词语": k, "总出现次数": v} for k, v in word_dict.items()]
         word_df = pd.DataFrame(word_list)
         word_df = word_df.sort_values(by="总出现次数", ascending=False)  # 降序排列
 
         excel_path = os.path.join(folder_danmu, f"{date}弹幕统计.xlsx")
         word_df.to_excel(excel_path, index=False)
-
-        # 美化Excel：添加总弹幕数标题
+        
         wb_dm = load_workbook(excel_path)
         ws_dm = wb_dm.active
         ws_dm.insert_rows(1)

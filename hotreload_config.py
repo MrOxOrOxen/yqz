@@ -13,5 +13,5 @@ HOT_RELOAD_CONFIG = {
             'get_gift_reply', 'handle_thank_reply', 'handle_total_gift_reply',
             'thank_gift', 'call_at_gift', 'call_gift'
         ]
-    },
+    }
 }

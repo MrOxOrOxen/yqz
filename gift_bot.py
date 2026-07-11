@@ -1,4 +1,5 @@
 from memory_store import *
+from constants import *
 from logger import add_log
 import random
 from json_handle import save_json
@@ -7,18 +8,24 @@ import time
 from bilibili_api import user
 from ids import *
 import asyncio
+import re
 
 # 礼物姬基本功能
 def get_gift_reply(uid, uname):
     uid = str(uid)
 
     if uid not in MEMORY["gift"]:
+        if uid == ADMIN_ID:
+            return f"[礼物姬]卡米宝宝今天还没有送过礼物哦"
         if len(uname) > 23:
             uname = uname[:20] + "..."
         return f"[礼物姬]{uname}老师今天还没有送过礼物哦"
 
     stats = MEMORY["gift"][uid]
     profit = stats["profit"]
+
+    if uid == ADMIN_ID:
+        return f"[礼物姬]卡米宝宝已送出{profit:.0f}电池的礼物！"
 
     if len(uname) > 13:
         uname = uname[:10] + "..."
@@ -60,15 +67,22 @@ async def handle_total_gift_reply(uid, profit):
         add_log(f"[礼物姬] 下一电池阈值: {next_t}")
 
 def thank_gift(uid, uname, gift_name, gift_value):
+    pattern = r"(舰长|提督|总督)\*(\d+)天$"
+    match = re.search(pattern, gift_name)
     if gift_name == "SuperChat":
         if len(uname) > 12:
             uname = uname[:9] + "..."
         return f"[礼物姬]哇！感谢{uname}老师送出的{gift_value/10:.0f}元SC！老板大气！"
 
     elif gift_name in ["舰长", "提督", "总督", "大航海"]:
-        if len(uname) > 14:
-            uname = uname[:11] + "..."
+        if len(uname) > 14: uname = uname[:11] + "..."
         return f"[礼物姬]哇！感谢{uname}老师的{gift_name}！老板大气！"
+
+    elif match:
+        guard = match.group(1)
+        days = match.group(2)
+        if len(uname) > 17: uname = uname[:14] + "..."
+        return f"[礼物姬]哇！感谢{uname}老师的{days}天{guard}！老板大气！"
 
     else:
         # 卡米的一百天彩蛋
@@ -88,7 +102,7 @@ async def call_gift(uid, uname):
 
     if uid == ADMIN_ID:
         add_log("[礼物姬] 卡米宝宝触发礼物姬")
-        await asyncio.sleep(4)
+        await asyncio.sleep(3)
 
     reply = get_gift_reply(uid, uname)
 
