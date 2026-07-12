@@ -317,7 +317,13 @@ async def dynamic_monitor(qq_bot):
 
                         origin_text = orig_info['text']
                         if orig_info['title'] and orig_info['title'] != orig_info['text']:
+                            if origin_text and len(origin_text) > 200:
+                                origin_text = origin_text[:200] + "..."
                             origin_text = f"{orig_info['title']}\n{origin_text}" if origin_text else orig_info['title']
+                        else:
+                            if origin_text and len(origin_text) > 200:
+                                origin_text = origin_text[:200] + "..."
+
                         if not origin_text:
                             origin_text = "[该动态无文字内容]"
                         
@@ -370,6 +376,9 @@ async def dynamic_monitor(qq_bot):
 
                 # ========== 视频 ==========
                 elif dyn_type == 'DYNAMIC_TYPE_AV':
+                    if "【直播回放】" in info['title']:
+                        continue
+
                     segments.append({"type": "text", "data": {"text": f"{header}\n[云崎早_haya]发布了新视频！\n\n"}})
 
                     if info['title']:
