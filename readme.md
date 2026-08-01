@@ -176,8 +176,7 @@ All rights reserved.
   
 2. 隐藏的文件：
    
-   - memory_store.py：存储需定期改变或程序需要修改的常量
-   - constants.py: 存储不会改变的常量
+   - memory_store.py与constants.py：存储常量（记不清当时为什么分成两个文件了，总之将就用吧）
    - ids.py：存储用户uid
    - data.py：存储SESSDATA、BUVID3等credential常量
   
