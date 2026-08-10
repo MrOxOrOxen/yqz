@@ -343,7 +343,10 @@ async def call_month_at_box(uid, uname, msg):
     month_cnt, month_cost, month_profit = await load_month_data(to_check_uid, month, year, data_type, box_name=box_name, check_user_type="single")
     month_net = month_profit - month_cost
     if month_cnt > 0:
-        reply = f"[盲盒姬]{to_check_uname}老师{month}月已抽取{month_cnt}个{reply_box_name}，净收益{month_net:.0f}电池"
+        if uid == ADMIN_ID:
+            reply = f"[盲盒姬]卡米宝宝{month}月已抽取{month_cnt}个{reply_box_name}，净收益{month_net:.0f}电池"
+        else:
+            reply = f"[盲盒姬]{to_check_uname}老师{month}月已抽取{month_cnt}个{reply_box_name}，净收益{month_net:.0f}电池"
 
         if month_net < -50000:
             reply += "!？"
@@ -357,7 +360,10 @@ async def call_month_at_box(uid, uname, msg):
             reply += "！"
 
     elif month_cnt == 0:
-        reply = f"[盲盒姬]{to_check_uname}老师{month}月还没有抽取过{reply_box_name}哦"
+        if uid == ADMIN_ID:
+            reply = f"[盲盒姬]卡米宝宝{month}月还没有抽取过{reply_box_name}哦"
+        else:
+            reply = f"[盲盒姬]{to_check_uname}老师{month}月还没有抽取过{reply_box_name}哦"
     
     if len(reply) <= 40:
         await reply_queue.put((uid, reply))

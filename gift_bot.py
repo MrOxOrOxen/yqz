@@ -66,32 +66,38 @@ async def handle_total_gift_reply(uid, profit):
         
         add_log(f"[礼物姬] 下一电池阈值: {next_t}")
 
-def thank_gift(uid, uname, gift_name, gift_value):
+def thank_gift(uid, uname, gift_name, gift_value, cnt=1):
     pattern = r"(舰长|提督|总督)\*(\d+)天$"
     match = re.search(pattern, gift_name)
     if gift_name == "SuperChat":
         if len(uname) > 12:
             uname = uname[:9] + "..."
-        return f"[礼物姬]哇！感谢{uname}老师送出的{gift_value/10:.0f}元SC！老板大气！"
+        return f"[礼物姬]哇！感谢{uname}老师送出的{gift_value/10:.0f}元SC！老板大气！" if uid != ADMIN_ID else f"[礼物姬]哇！感谢卡米宝宝送出的{gift_value/10:.0f}元SC！老板大气！"
 
     elif gift_name in ["舰长", "提督", "总督", "大航海"]:
         if len(uname) > 14: uname = uname[:11] + "..."
-        return f"[礼物姬]哇！感谢{uname}老师的{gift_name}！老板大气！"
+        if uid == ADMIN_ID and gift_name == "舰长" and cnt == 12:
+            return f"[礼物姬]哇！感谢卡米宝宝的提督！老板大气！"
+        elif cnt == 1:
+            return f"[礼物姬]哇！感谢{uname}老师的{gift_name}！老板大气！" if uid != ADMIN_ID else f"[礼物姬]哇！感谢卡米宝宝的{gift_name}！老板大气！"
+        else:
+            if len(uname) > 12: uname = uname[:9] + "..."
+            return f"[礼物姬]哇！感谢{uname}老师的{cnt}个月{gift_name}！老板大气！" if uid != ADMIN_ID else f"[礼物姬]哇！感谢卡米宝宝的{cnt}个月{gift_name}！老板大气！"
 
     elif match:
         guard = match.group(1)
         days = match.group(2)
         if len(uname) > 17: uname = uname[:14] + "..."
-        return f"[礼物姬]哇！感谢{uname}老师的{days}天{guard}！老板大气！"
+        return f"[礼物姬]哇！感谢{uname}老师的{days}天{guard}！老板大气！" if uid != ADMIN_ID else f"[礼物姬]哇！感谢卡米宝宝的{days}天{guard}！老板大气！"
 
     else:
         # 卡米的一百天彩蛋
-        if uid == ADMIN_ID and gift_name == "为你摘星":
-            return None
+        # if uid == ADMIN_ID and gift_name == "为你摘星":
+        #     return None
 
         if len(uname) > 15:
             uname = uname[:12] + "..."
-        return f"[礼物姬]哇！感谢{uname}老师投喂的{gift_name}！老板大气！"
+        return f"[礼物姬]哇！感谢{uname}老师投喂的{gift_name}！老板大气！" if uid != ADMIN_ID else f"[礼物姬]哇！感谢卡米宝宝投喂的{gift_name}！老板大气！"
 
 # 呼叫礼物姬
 async def call_gift(uid, uname):

@@ -298,7 +298,7 @@ async def dynamic_monitor(qq_bot):
                     if not forward_text and topic:
                         forward_text = topic.get('name', '') or topic.get('desc', '')
 
-                    segments.append({"type": "text", "data": {"text": f"{header}\n[云崎早_haya]转发了动态！\n"}})
+                    segments.append({"type": "text", "data": {"text": f"{header}\n云崎早_haya 转发了动态！\n"}})
 
                     if forward_text.strip():
                         segments.append({"type": "text", "data": {"text": f"{forward_text}\n\n"}})
@@ -317,12 +317,12 @@ async def dynamic_monitor(qq_bot):
 
                         origin_text = orig_info['text']
                         if orig_info['title'] and orig_info['title'] != orig_info['text']:
-                            if origin_text and len(origin_text) > 200:
-                                origin_text = origin_text[:200] + "..."
+                            if origin_text and len(origin_text) > 250:
+                                origin_text = origin_text[:250] + "..."
                             origin_text = f"{orig_info['title']}\n{origin_text}" if origin_text else orig_info['title']
                         else:
-                            if origin_text and len(origin_text) > 200:
-                                origin_text = origin_text[:200] + "..."
+                            if origin_text and len(origin_text) > 250:
+                                origin_text = origin_text[:250] + "..."
 
                         if not origin_text:
                             origin_text = "[该动态无文字内容]"
@@ -334,7 +334,7 @@ async def dynamic_monitor(qq_bot):
                             orig_author_module = orig_modules.get('module_author', {})
                             orig_author = orig_author_module.get('name', '未知用户')
                         
-                        segments.append({"type": "text", "data": {"text": f"===\n原动态：[{orig_author}]\n{origin_text}\n===\n"}})
+                        segments.append({"type": "text", "data": {"text": f"===\n原动态：{orig_author}\n{origin_text}\n===\n"}})
                     else:
                         segments.append({"type": "text", "data": {"text": "===\n原动态已删除或不可见\n===\n"}})
 
@@ -349,7 +349,7 @@ async def dynamic_monitor(qq_bot):
 
                 # ========== 图文动态 ==========
                 elif dyn_type == 'DYNAMIC_TYPE_DRAW':
-                    segments.append({"type": "text", "data": {"text": f"{header}\n[云崎早_haya]发布了新动态！\n\n"}})
+                    segments.append({"type": "text", "data": {"text": f"{header}\n云崎早_haya 发布了新动态！\n\n"}})
                     
                     if info['title']:
                         segments.append({"type": "text", "data": {"text": f"{info['title']}\n"}})
@@ -367,7 +367,7 @@ async def dynamic_monitor(qq_bot):
 
                 # ========== 纯文字动态 ==========
                 elif dyn_type == 'DYNAMIC_TYPE_WORD':
-                    segments.append({"type": "text", "data": {"text": f"{header}\n[云崎早_haya]发布了新动态！\n\n"}})
+                    segments.append({"type": "text", "data": {"text": f"{header}\n云崎早_haya 发布了新动态！\n\n"}})
 
                     if info['text']:
                         segments.append({"type": "text", "data": {"text": f"{info['text']}\n\n"}})
@@ -379,7 +379,7 @@ async def dynamic_monitor(qq_bot):
                     if "【直播回放】" in info['title']:
                         continue
 
-                    segments.append({"type": "text", "data": {"text": f"{header}\n[云崎早_haya]发布了新视频！\n\n"}})
+                    segments.append({"type": "text", "data": {"text": f"{header}\n云崎早_haya 发布了新视频！\n\n"}})
 
                     if info['title']:
                         segments.append({"type": "text", "data": {"text": f"{info['title']}\n"}})
@@ -395,7 +395,7 @@ async def dynamic_monitor(qq_bot):
 
                 # ========== 小视频 ==========
                 elif dyn_type == 'DYNAMIC_TYPE_SHORT':
-                    segments.append({"type": "text", "data": {"text": f"{header}\n[云崎早_haya]发布了新视频！\n\n"}})
+                    segments.append({"type": "text", "data": {"text": f"{header}\n云崎早_haya 发布了新视频！\n\n"}})
 
                     if info['title']:
                         segments.append({"type": "text", "data": {"text": f"{info['title']}\n"}})
@@ -411,7 +411,7 @@ async def dynamic_monitor(qq_bot):
 
                 # ========== 音频 ==========
                 elif dyn_type == 'DYNAMIC_TYPE_MUSIC':
-                    segments.append({"type": "text", "data": {"text": f"{header}\n[云崎早_haya]发布了新音频！\n\n"}})
+                    segments.append({"type": "text", "data": {"text": f"{header}\n云崎早_haya 发布了新音频！\n\n"}})
 
                     if info['title']:
                         segments.append({"type": "text", "data": {"text": f"{info['title']}\n"}})
@@ -427,7 +427,7 @@ async def dynamic_monitor(qq_bot):
 
                 # ========== 专栏 ==========
                 elif dyn_type == 'DYNAMIC_TYPE_ARTICLE':
-                    segments.append({"type": "text", "data": {"text": f"{header}\n[云崎早_haya]发布了新专栏！\n\n"}})
+                    segments.append({"type": "text", "data": {"text": f"{header}\n云崎早_haya 发布了新专栏！\n\n"}})
 
                     if info['title']:
                         segments.append({"type": "text", "data": {"text": f"{info['title']}\n"}})
@@ -443,7 +443,7 @@ async def dynamic_monitor(qq_bot):
 
                 # ========== 其他未知类型 ==========
                     '''
-                    segments.append({"type": "text", "data": {"text": f"{header}\n[云崎早_haya]发布了新动态！\n\n（该动态类型暂不支持解析：{dyn_type}）\n\n===\n动态地址：{link}"}})
+                    segments.append({"type": "text", "data": {"text": f"{header}\n云崎早_haya 发布了新动态！\n\n（该动态类型暂不支持解析：{dyn_type}）\n\n===\n动态地址：{link}"}})
                     '''
                 if qq_bot and segments != []:
                     await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)

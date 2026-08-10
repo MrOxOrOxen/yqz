@@ -228,7 +228,7 @@ async def record_to_guard_log(uid, uname, price, guard_level, start_time, source
     update_all_log(uid, uname, guard_name, price)
     add_log(f"[{source}] {uname} {guard_name}x{cnt} ({price} 电池)")
 
-    reply = thank_gift(uid, uname, guard_name, price)
+    reply = thank_gift(uid, uname, guard_name, price, cnt)
     if reply:
         await handle_thank_reply(uid, uname, reply)
 
@@ -263,6 +263,59 @@ async def periodic_tasks():
 
                 MEMORY["audience"]["interact_cache"] = list(interact_cache)
                 save_json("files/audience.json", MEMORY["audience"])
+
+                try:
+                    room_info = live.LiveRoom(ROOM_ID)
+                    info = await room_info.get_room_info()
+                    real_status = 1 if info["room_info"]["live_status"] == 1 else 0
+                    
+                    if real_status == 1 and LIVE_STATUS == 0:
+                        add_log(f"[轮询兜底] 检测到已开播但 LIVE_STATUS=0，自动修正")
+                        LIVE_STATUS = 1
+                        MEMORY["meta"]["live_time"] = now
+                        MEMORY["meta"]["title"] = info["room_info"].get("title", "")
+                        save_json("files/meta.json", MEMORY["meta"])
+                        try:
+                            process = subprocess.Popen(
+                                [sys.executable, "/root/bili/bili_gift_map.py"],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE
+                            )
+                            add_log("bili_gift_map.json loaded")
+                        except Exception as e:
+                            add_log(f"Failed to run bili_gift_map.py: {e}")
+
+                    elif real_status == 0 and LIVE_STATUS == 1:
+                        add_log(f"[轮询兜底] 检测到下播但 LIVE_STATUS=1，自动修正")
+                        LIVE_STATUS = 0
+                        prepare_time = datetime.now().strftime("%H:%M")
+                        prepare_timestamp = int(time.time())
+                        live_start_ts = MEMORY["meta"].get("live_time", prepare_timestamp)
+                        live_length = (prepare_timestamp - live_start_ts) // 60
+                        live_hours = live_length // 60
+                        live_mins = live_length % 60
+                        
+                        if live_hours == 0 and live_mins == 0:
+                            time_length = "不足1分钟"
+                        elif live_hours == 0:
+                            time_length = f"{live_mins}分钟"
+                        elif live_mins == 0:
+                            time_length = f"{live_hours}小时"
+                        else:
+                            time_length = f"{live_hours}小时{live_mins}分钟"
+                        
+                        live_start_time = time.strftime("%H:%M", time.localtime(live_start_ts))
+                        title = MEMORY["meta"].get("title", "天  才  主  播  ！")
+                        
+                        try:
+                            await send_email(live_start_time, prepare_time, time_length, title)
+                            add_log(f"[轮询兜底] 已补发下播邮件，时长: {time_length}")
+                        except Exception as e:
+                            add_log(f"[轮询兜底] 补发下播邮件失败: {e}")
+
+                except Exception as e:
+                    add_log(f"[轮询检测] 获取房间信息失败: {e}")
+
                 last_save_time = now
                 add_log("All json files saved")
                 on_gift_saved()
@@ -513,6 +566,10 @@ async def interact_word(event):
     reply = None
     
     if uid in interact_cache and uid != ADMIN_ID:
+        if uid == YQZ_ID:
+            reply = f"[欢迎姬]报告！发现云崎早_haya同学进入直播间！"
+            add_log("[欢迎姬] 云崎早同学又一次进入直播间")
+            await reply_queue.put((YQZ_ID, reply))
         return
 
     if uid == ADMIN_ID:
@@ -523,7 +580,11 @@ async def interact_word(event):
             target_date = datetime(2026, 3, 20)
             today = datetime.now().date()
             days_passed = abs((target_date.date() - today).days) + 1
-            if days_passed % 100 == 0 or days_passed == 50:
+            if today.month == 5 and today.day == 3:
+                reply = "[欢迎姬]今天是云宝的生日哎！卡米宝宝祝全世界最最最可爱的云宝生日快乐！"
+            elif today.month == 10 and today.day == 3:
+                reply = "[欢迎姬]今天是卡米宝宝的生日哎！"
+            elif days_passed % 100 == 0 or days_passed == 50:
                 reply = f"[欢迎姬]哇！今天是卡米宝宝和云宝相遇的{days_passed}天哎！{days_passed}天快乐！"
             elif today.month == 3 and today.day == 20:
                 years_passed = today.year - 2026
@@ -544,7 +605,12 @@ async def interact_word(event):
         medal_name = medal.get('name', None)
         medal_level = medal.get('level', 0)
         if medal_name == "早崎鸭":
-            if uid in WELCOME_MAP:
+            if uid == YQZ_ID:
+                if int(time.time()) - MEMORY["meta"]["live_time"] <= 120:
+                    reply = "[欢迎姬]欢迎云宝！今天也要认真工作哦！"
+                else:
+                    reply = "[欢迎姬]报告！发现云崎早_haya同学进入直播间！"
+            elif uid in WELCOME_MAP:
                 reply = WELCOME_MAP[uid].format(uname=uname)
             elif medal_level > 30:
                 if len(uname) > 16:
@@ -562,20 +628,6 @@ async def interact_word(event):
         else:
             await reply_queue.put((uid, reply))
         add_log(f"[欢迎姬] 欢迎{uname}")
-
-    if uid == ADMIN_ID:
-        if uid in interact_cache:
-            return
-        today = datetime.now().date()
-        reply = None
-        if today.month == 5 and today.day == 3:
-            reply = "[欢迎姬]今天是云宝的生日哎！全世界最最最可爱的云宝生日快乐！"
-        elif today.month == 10 and today.day == 3:
-            reply = "[欢迎姬]今天是卡米宝宝的生日哎！"
-        
-        if reply:
-            await reply_queue.put((YQZ_ID, reply))
-
 
 @room.on('COMMON_NOTICE_DANMAKU')
 async def on_common_notice_danmaku(event):
@@ -674,7 +726,7 @@ async def on_live(event):
     try:    
         cover = room_data.get("cover", "")
         segments = [
-            {"type": "text", "data": {"text": "【推送姬】开播提醒\n云崎早_haya开播啦！\n"}},
+            {"type": "text", "data": {"text": "【推送姬】开播提醒\n云崎早_haya 开播啦！\n"}},
         ]
         if cover:
             segments.append({"type": "image", "data": {"file": cover}})
@@ -691,7 +743,7 @@ async def on_live(event):
     except Exception:
         segments = [{
             "type": "text",
-            "data": {"text": f"【推送姬】开播提醒\n云崎早_haya开播啦！\n标题：{title}\n房间号：27885573\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！"}
+            "data": {"text": f"【推送姬】开播提醒\n云崎早_haya 开播啦！\n标题：{title}\n房间号：27885573\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！"}
         }]
 
         await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
@@ -719,7 +771,7 @@ async def on_preparing(event):
     live_hours = int(live_length) // 60
     live_mins = int(live_length) % 60
     live_start_time = time.strftime("%H:%M", time.localtime(MEMORY["meta"]["live_time"]))
-    if qq:
+    if qq and MEMORY["meta"]["live_time"] != 0:
         if live_hours == 0 and live_mins == 0:
             time_length = "不足1分钟"
         elif live_hours == 0:
@@ -729,13 +781,13 @@ async def on_preparing(event):
         else:
             time_length = f"{live_hours}小时{live_mins}分钟"
 
-        await qq.text(f"【推送姬】下播提醒\n云崎早_haya下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP)
+        await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP)
         await asyncio.sleep(5)
-        await qq.text(f"【推送姬】下播提醒\n云崎早_haya下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP_FANS)
+        await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP_FANS)
         add_log("[推送姬] 下播提醒")
 
     await asyncio.sleep(5)
-    title = MEMORY["meta"]["title"] or "天！才！主！播！"
+    title = MEMORY["meta"]["title"] or "天  才  主  播  ！"
     await send_email(live_start_time, prepare_time, time_length, title)
 
 '''

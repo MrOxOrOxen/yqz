@@ -160,8 +160,31 @@ async def danmu_egg(count=50):
                 MEMORY["meta"]["is_castle_msg_sent"] = True
                 save_json("files/meta.json", MEMORY["meta"])
                 castle_msg = "[盲盒姬]今天星期五！戒赌所来开会啦！"
-                await reply_queue.put((YQZ_ID, castle_msg))
+                if HULI_ID in MEMORY["audience"]["interact_cache"]:
+                    await reply_queue.put((HULI_ID, castle_msg))
+                else:
+                    await reply_queue.put((YQZ_ID, castle_msg))
                 add_log(f"[盲盒姬] castle")
+
+        except Exception as e:
+            print(f"统计弹幕失败: {e}")
+            return False
+
+    async def oil():
+        if MEMORY["meta"]["is_oil_msg_sent"] == True:
+            return False
+
+        if YANCHENGCHUAN_ID in MEMORY["audience"]["interact_cache"]:
+            return False
+
+        try:
+            total_count = MEMORY["meta"].get("total_danmu_cnt_from_start", 0) + len(MEMORY["danmu"])
+            if total_count >= count:
+                MEMORY["meta"]["is_oil_msg_sent"] = True
+                save_json("files/meta.json", MEMORY["meta"])
+                oil_msg = "[云崎早的闹钟]提醒喵！记得吃鱼油喵！"
+                await reply_queue.put((YQZ_ID, oil_msg))
+                add_log(f"[云崎早的闹钟] oil")
 
         except Exception as e:
             print(f"统计弹幕失败: {e}")
@@ -169,7 +192,8 @@ async def danmu_egg(count=50):
 
     await birthday()
     await kfc()
-    # await castle()
+    await castle()
+    await oil()
     # await gachi_combo()
     # await question_mark_combo()
     # await circle_combo()
@@ -270,16 +294,7 @@ async def danmu_egg(count=50):
     
 
 async def gift_egg(uid, uname, gift_name, num, single_battery):
-    async def admin_egg(uid, gift_name):
-        # 卡米的一百天彩蛋
-        if uid == ADMIN_ID and gift_name == "为你摘星":
-            admin_egg_msg1 = "[from 卡米] 云宝，一百天快乐。"
-            admin_egg_msg2 = "[from 卡米] 给你摘一颗星星，让它在每个我不在的夜晚，替我去爱你。"
-            await reply_queue.put((YQZ_ID, admin_egg_msg1))
-            await reply_queue.put((YQZ_ID, admin_egg_msg2))
-            add_log("[礼物姬] admin_egg")
-
-    await admin_egg(uid, gift_name)
+    pass
 
 async def sc_egg(uid, uname, battery, message):
     async def shennai(uid, message):
