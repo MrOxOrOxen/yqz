@@ -736,9 +736,14 @@ async def on_live(event):
             "data": {"text": f"标题：{title}\n房间号：27885573\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！"}
         })
 
-        await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
-        await asyncio.sleep(5)
-        await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
+        # for gid in TARGET_GROUP_LIST:
+        #     await qq.send_mixed(segments, at_all=True, group_id=gid)
+        #     await asyncio.sleep(3)
+        tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
+        await asyncio.gather(*tasks, return_exceptions=True)
+        # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
+        # await asyncio.sleep(5)
+        # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
 
     except Exception:
         segments = [{
@@ -746,9 +751,14 @@ async def on_live(event):
             "data": {"text": f"【推送姬】开播提醒\n云崎早_haya 开播啦！\n标题：{title}\n房间号：27885573\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！"}
         }]
 
-        await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
-        await asyncio.sleep(5)
-        await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
+        # for gid in TARGET_GROUP_LIST:
+        #     await qq.send_mixed(segments, at_all=True, group_id=gid)
+        #     await asyncio.sleep(3)
+        tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
+        await asyncio.gather(*tasks, return_exceptions=True)
+        # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
+        # await asyncio.sleep(5)
+        # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
 
     try:
         process = subprocess.Popen(
@@ -781,9 +791,14 @@ async def on_preparing(event):
         else:
             time_length = f"{live_hours}小时{live_mins}分钟"
 
-        await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP)
-        await asyncio.sleep(5)
-        await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP_FANS)
+        # for gid in TARGET_GROUP_LIST:
+        #     await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=gid)
+        #     await asyncio.sleep(3)
+        tasks = [qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
+        await asyncio.gather(*tasks, return_exceptions=True)
+        # await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP)
+        # await asyncio.sleep(5)
+        # await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP_FANS)
         add_log("[推送姬] 下播提醒")
 
     await asyncio.sleep(5)

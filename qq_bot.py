@@ -5,6 +5,28 @@ from bilibili_api import live, sync, Credential, user
 from memory_store import *
 from constants import *
 import json
+import time
+import uuid
+import os
+import base64
+
+async def download_image(url: str) -> str:
+    """下载网络图片到本地临时目录，返回本地绝对路径"""
+    if not url or not str(url).startswith("http"):
+        return url
+
+    timeout_cfg = aiohttp.ClientTimeout(total=8, connect=3)
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=timeout_cfg) as resp:
+                if resp.status == 200:
+                    content = await resp.read()
+                    b64_data = base64.b64encode(content).decode("utf-8")
+                    return f"base64://{b64_data}"
+    except Exception as e:
+        print(f"图片下载失败: {e}")
+    
+    return url
 
 class QQBot:
     def __init__(self, api_url: str, group_id: str = "", token: str = ""):
@@ -13,37 +35,44 @@ class QQBot:
         self.token = token
 
     async def send(self, message_segments: list, group_id: str = None):
+        t0 = time.time()
         gid = int(group_id) if group_id else self.group_id
         if gid is None:
             add_log("[NapCat推送异常] 未指定群号，跳过发送")
             return
+
+        async def process_segment(seg):
+            if seg.get("type") == "image":
+                file_url = seg.get("data", {}).get("file", "")
+                if file_url.startswith("http"):
+                    local_file = await download_image(file_url)
+                    return {"type": "image", "data": {"file": local_file}}
+            return seg
+
+        processed_segments = await asyncio.gather(*[process_segment(s) for s in message_segments])
+
+        timeout_cfg = aiohttp.ClientTimeout(total=4, connect=2)
+        headers = {
+            "Content-Type": "application/json",
+            "Connection": "close"
+        }
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+
+        url = f"{self.api_url}/send_group_msg"
+        payload = {"group_id": gid, "message": list(processed_segments)}
+
         try:
-            headers = {"Content-Type": "application/json"}
-            if self.token:
-                headers["Authorization"] = f"Bearer {self.token}"
-            
             async with aiohttp.ClientSession() as session:
-                payload = {
-                    "group_id": gid,
-                    "message": message_segments
-                }
-                # token 放 URL 参数里，NapCat 兼容性最好
-                url = f"{self.api_url}/send_group_msg"
-                if self.token:
-                    url += f"?access_token={self.token}"
-                
-                async with session.post(
-                    url,
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=10)
-                ) as resp:
-                    r = await resp.json()
-                    if r.get("status") == "ok" or r.get("retcode") in [0, None]:
-                        add_log(f"[NapCat推送成功] 群{gid}")
-                    else:
-                        add_log(f"[NapCat推送失败] 群{gid}: {r}")
+                async with session.post(url, json=payload, headers=headers, timeout=timeout_cfg) as resp:
+                    cost = round((time.time() - t0) * 1000, 2)
+                    add_log(f"[NapCat推送完成] 群{gid} (HTTP响应耗时: {cost}ms)")
+        except asyncio.TimeoutError:
+            cost = round((time.time() - t0) * 1000, 2)
+            add_log(f"[NapCat响应超时] 群{gid} 已请求但未等回包 ({cost}ms，消息通常已发出)")
         except Exception as e:
-            add_log(f"[NapCat推送异常] {e}")
+            cost = round((time.time() - t0) * 1000, 2)
+            add_log(f"[NapCat推送异常] 群{gid}: {type(e).__name__} ({cost}ms)")
 
     async def text(self, msg: str, at_all: bool = False, group_id: str = None):
         segments = []
@@ -69,46 +98,11 @@ class QQBot:
 
     async def send_mixed(self, segments: list, at_all: bool = False, group_id: str = None):
         """segments 是 [{"type":"text"/"image", "data":{...}}, ...] 的列表"""
-        try:
-            headers = {"Content-Type": "application/json"}
-            if self.token:
-                headers["Authorization"] = f"Bearer {self.token}"
-            
-            final_segments = []
-            if at_all:
-                final_segments.append({"type": "at", "data": {"qq": "all"}})
-            final_segments.extend(segments)
-
-            gid = int(group_id) if group_id else self.group_id
-            if gid is None:
-                add_log("[NapCat推送异常] 未指定群号，跳过发送")
-                return
-
-            # print(f"[DEBUG] token={self.token!r}, group_id={self.group_id}, api_url={self.api_url}")
-        
-            url = f"{self.api_url}/send_group_msg"
-            if self.token:
-                url += f"?access_token={self.token}"
-            # print(f"[DEBUG] URL={url}")
-            
-            async with aiohttp.ClientSession() as session:
-                payload = {
-                    "group_id": gid,
-                    "message": final_segments
-                }
-                # print(f"[DEBUG] payload={payload}")
-                
-                async with session.post(
-                    url, json=payload, timeout=aiohttp.ClientTimeout(total=10)
-                ) as resp:
-                    r = await resp.json()
-                    if r.get("status") == "ok" or r.get("retcode") in [0, None]:
-                        add_log(f"[NapCat推送成功] 群{gid}")
-                    else:
-                        add_log(f"[NapCat推送失败] 群{gid}: {r}")
-        except Exception as e:
-            gid = int(group_id) if group_id else (self.group_id or "未知")
-            add_log(f"[NapCat推送异常] 群{gid}: {e}")
+        final_segments = []
+        if at_all:
+            final_segments.append({"type": "at", "data": {"qq": "all"}})
+        final_segments.extend(segments)
+        await self.send(final_segments, group_id=group_id)
 
 async def dynamic_monitor(qq_bot):
     from bilibili_api import client
@@ -137,7 +131,6 @@ async def dynamic_monitor(qq_bot):
         major = module_dynamic.get('major', {}) or {}
         basic = item.get('basic', {})
         
-        # 链接处理（补全 https:）
         link = basic.get('jump_url', '')
         if link and not link.startswith('http'):
             link = 'https:' + link
@@ -341,9 +334,12 @@ async def dynamic_monitor(qq_bot):
                     segments.append({"type": "text", "data": {"text": f"动态地址：{link}"}})
 
                     if qq_bot:
-                        await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
-                        await asyncio.sleep(5)
-                        await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
+                        pass
+                        tasks = [qq_bot.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
+                        await asyncio.gather(*tasks, return_exceptions=True)
+                        # await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
+                        # await asyncio.sleep(5)
+                        # await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
                     add_log(f"[推送姬] 转发提醒 ID:{dyn_id}")
                     continue
 
@@ -446,9 +442,12 @@ async def dynamic_monitor(qq_bot):
                     segments.append({"type": "text", "data": {"text": f"{header}\n云崎早_haya 发布了新动态！\n\n（该动态类型暂不支持解析：{dyn_type}）\n\n===\n动态地址：{link}"}})
                     '''
                 if qq_bot and segments != []:
-                    await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
-                    await asyncio.sleep(5)
-                    await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
+                    pass
+                    tasks = [qq_bot.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
+                    await asyncio.gather(*tasks, return_exceptions=True)
+                    # await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
+                    # await asyncio.sleep(5)
+                    # await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
                     
                 add_log(f"[推送姬] {TYPE_MAP.get(dyn_type, '未知')}提醒 ID:{dyn_id}")
                 
