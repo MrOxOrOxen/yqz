@@ -1,6 +1,6 @@
 # 哔哩哔哩直播间&QQ群推送机器人
 
-*Last updated at 15 Aug, 2026*
+*Last updated at 16 Aug, 2026*
 
 Copyright © 2026 云崎早_haya & 晚安卡米宝宝
 
@@ -197,6 +197,12 @@ All rights reserved.
    - 邮件：admin@yqzhaya.com
 
 ## 更新日志
+
+### 2026.8.16
+
+代码逻辑调整：程序处在开播状态下时，若再次收到LIVE接口信息会直接忽略。
+
+同理，程序处在下播状态下时，若再次收到PREPARING接口信息会直接忽略。
 
 ### 2026.8.15
 
