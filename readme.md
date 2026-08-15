@@ -6,6 +6,8 @@ Copyright © 2026 云崎早_haya & 晚安卡米宝宝
 
 All rights reserved.
 
+本文件为readme文档。技术文档请参考techdoc.md.
+
 本机器人为哔哩哔哩用户“云崎早_haya”的直播专用机器人，以及其舰长群与粉丝群的推送机器人。包含以下功能：
 
 ## 1 欢迎姬
