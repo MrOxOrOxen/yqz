@@ -1,6 +1,6 @@
 # 哔哩哔哩直播间&群推送机器人
 
-*Last updated at 13 Aug, 2026*
+*Last updated at 15 Aug, 2026*
 
 Copyright © 2026 云崎早_haya & 晚安卡米宝宝
 
@@ -197,6 +197,10 @@ All rights reserved.
    - 邮件：admin@yqzhaya.com
 
 ## 更新日志
+
+### 2026.8.15
+
+创建技术文档techdoc.md.
 
 ### 2026.8.13
 
