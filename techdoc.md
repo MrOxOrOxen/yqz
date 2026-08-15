@@ -4,7 +4,7 @@
 
 *Developed and written by 晚安卡米宝宝
 
-*Last updated on 15 Aug, 2026*
+*Last updated on 16 Aug, 2026*
 
 # 0 需要先知道的一些内容
 
@@ -473,6 +473,8 @@ is_birthday_msg_sent为云崎早生日彩蛋的控制变量。类似于is_birthd
 bilibili_api监听端口LIVE是用来监听开播这一瞬间的。当云崎早开播时，LIVE会发送一个字典过来。机器人程序没有对这个字典进行处理，但是一旦接收到这个字典就意味着开播，此时设置LIVE_STATUS为1，通过调用live.LiveRoom即可获取直播间标题及封面，通过time库可以获取开播时间，然后把这些信息传入meta.json、内存以及推送姬程序。
 
 在很偶尔的情况下，LIVE端口会漏掉开播的信息。为防止漏掉开播导致所有机器人程序都不会运行（前面说的LIVE_STATUS不为1时机器人不会工作），程序中做了每30s查询直播间状态的设置。如果查询结果为1但LIVE_STATUS为0，则强制将LIVE_STATUS设为1，同时将直播信息保存进meta.json与内存，但不发给推送姬（因为开播时间不一定准确）。
+
+为防止云宝那边网络卡顿导致多次收到LIVE接口，程序中设定如果监听到LIVE接口信息时LIVE_STATUS为1，则自动忽略此次LIVE监听。同理，如果监听到PREPARING接口信息时LIVE_STATUS不为1，则自动忽略此次PREPARING监听。
 
 为什么不只依靠每30s查询一次开播状态，而一定要配合LIVE接口查询呢？因为开播信息要的就是实时性，推送姬在开播的那一瞬间就必须向群里推送消息，而不是等30秒钟再发。LIVE端口的优势就是开播的一瞬间就会接收到字典。
 
