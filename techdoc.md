@@ -717,17 +717,7 @@ dynamic的类型包括但不限于：
 - DYNAMIC_TYPE_MUSIC：音频动态
 - DYNAMIC_TYPE_ARTICLE：专栏
 
-## 3.2 代码文件功能概述
-
-qq_bot.py为推送姬程序。由于NapCat允许将文本与图片混合发送，因此可先将需要发送的文本与图片内容逐个排列好，再直接交给NapCat推送。
-
-为防止动态内图片过多导致刷屏，推送姬设置了仅保留并发送第一张图片。
-
-为防止转发动态过长导致刷屏，转发动态的原动态限制字符长度为250个字符，若超出则用“...”来代替。
-
-推送姬的所有图片会预先下载至服务器并转为base64格式，再交给NapCat处理。
-
-## 3.3 动态获取
+## 3.2 动态获取
 
 通过带cookie访问动态api地址https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space?host_mid=3493074573461871 ，api会返回一个字典，这个字典的data->items为一个列表，其中每一个元素（都是字典）就是一条动态信息。
 
@@ -735,20 +725,54 @@ qq_bot.py为推送姬程序。由于NapCat允许将文本与图片混合发送�
 
 哔哩哔哩的动态发送的越晚，其ID值越大。因此，在每30s的轮询中，若ID list中出现了ID较大且不在上一轮查询中的动态ID，也就找到了新发布的动态，对新发布的动态进行解析即可。
 
-## 3.4 消息发送
+## 3.3 消息的组装
 
-通过asyncio并行遍历每一个消息片段，形成完整的消息段：
+qq_bot.py为推送姬程序。由于NapCat允许将文本与图片混合发送，因此可先将需要发送的文本与图片内容逐个排列好，再直接交给NapCat推送。
 
-```python
-asyncio.gather(*[process_segment(s) for s in message_segments])
-```
+程序中设定变量segments为承载所有消息块的列表。segments这个列表的元素有以下几种形式：
 
-通过异步并发的方式向NapCat推送内容：
+- 文本：
 
 ```python
-tasks = [qq_bot.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
-await asyncio.gather(*tasks, return_exceptions=True)
+{"type": "text", "data": {"text": "xxx"}}
 ```
+
+- 图片：
+
+```python
+{"type": "image", "data": {"file": "xxx"}}
+```
+
+- @全体成员：
+
+```python
+{"type": "at", "data": {"qq": "all"}}
+```
+
+通过预设好的各种动态类型以及开播下播的模板，对每个segments片段按照顺序进行拼接。
+
+对于图片形式的segments片段，由于图片以url形式推送至代码中，为了防止推送姬因为下载图片导致产生很大的推送延迟，需要先在服务器中把图片下载下来，再将图片替换为base64格式的字节串，再转为UTF-8格式的字符串存入image的字典当中。
+
+所有segments片段通过追加模式写入segments这个list当中。其中，@全体成员的片段会直接插入到segments的最前端，即segments[0].
+
+为防止动态内图片过多导致刷屏，推送姬设置了仅保留并发送第一张图片。
+
+为防止转发动态过长导致刷屏，转发动态的原动态限制字符长度为250个字符，若超出则用“...”来代替。
+
+## 3.4 消息的发送
+
+将拼接好的segments与群号拼接成一个字典：
+
+```python
+payload = {
+    "group_id": gid,
+    "message": list(processed_segments)
+}
+```
+
+向服务器上的NapCat API节点发起http post请求，其中，payload以json格式传入，从而实现消息的推送。
+
+受到http阻塞影响，目前http post采用异步并发的形式发送，即两个群通过asyncio.gather的方式完全同步推送。
 
 # 3.5 紧急停止
 
