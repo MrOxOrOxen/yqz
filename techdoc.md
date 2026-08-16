@@ -101,7 +101,7 @@ nginx运行前需要配置nginx的conf文件。为了使绑定域名的网页能
 
 如果想要发送一些服务器上的数据到网站的话，通过python里面的FastAPI，可以自定义特定端口下接口的名称，可以认为最终的形式就是xx.xx.xx.xx:xxxx/xxxx或者http://xxx.com:xxxx/xxxx.
 
-FastAPI会将想要发送的数据转换成json文件的形式，并且通过上面的url发送出去。这也就意味着，如果直接访问xx.xx.xx.xx:xxxx/xxxx或者http://xxx.com:xxxx/xxxx，看到的就是FastAPI转换完的json文件。
+FastAPI会将想要发送的数据转换成json文件的形式，并且通过上面的url发送出去。这也就意味着，如果直接访问xx.xx.xx.xx:xxxx/xxxx或者http://xxx.com:xxxx/xxxx 看到的就是FastAPI转换完的json文件。
 
 网页文件中，有一种文件是javascript文件，这种格式的文件里面有一个fetch函数，可以直接调用端口对应的url地址。这样用户访问要传输的数据时，javascript文件就会通过fetch函数向url索要内容，python程序会把数据发出去。
 
@@ -729,7 +729,7 @@ qq_bot.py为推送姬程序。由于NapCat允许将文本与图片混合发送�
 
 ## 3.3 动态获取
 
-通过带cookie访问动态api地址（https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space?host_mid=3493074573461871），api会返回一个字典，这个字典的data->items为一个列表，其中每一个元素（都是字典）就是一条动态信息。
+通过带cookie访问动态api地址https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space?host_mid=3493074573461871 ，api会返回一个字典，这个字典的data->items为一个列表，其中每一个元素（都是字典）就是一条动态信息。
 
 通过提取动态字典的id_str，就可以获取到能看到的所有动态的动态ID. 需要注意的是，由于b站的翻页机制，程序只能获取到最靠前的十几条动态，且如果有置顶动态，置顶动态则永远为第一条。
 
