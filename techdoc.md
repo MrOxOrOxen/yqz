@@ -81,7 +81,7 @@ nginx运行前需要配置nginx的conf文件。为了使绑定域名的网页能
 
 直播间机器人的python程序使用的是FastAPI框架配合uvicorn来管理端口， uvicorn用来封装socket，在后台监听端口。
 
-可以认为整个的流程是这样的：用户访问http://xxx.com:xxxx，nginx把这个端口需求转发给python程序，然后python里面的uvicorn把这个端口的消息提供出去。
+可以认为整个的流程是这样的：用户访问http://xxx.com:xxxx ，nginx把这个端口需求转发给python程序，然后python里面的uvicorn把这个端口的消息提供出去。
 
 但实际上为了安全，nginx会做一步转发，就是用户访问a端口，nginx收到a端口，转发成b端口，然后python看的是b端口。
 
