@@ -750,6 +750,9 @@ tasks = [qq_bot.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGE
 await asyncio.gather(*tasks, return_exceptions=True)
 ```
 
+# 3.5 紧急停止
+
+考虑到云宝可能由于反复开播下播导致推送姬在群里刷屏，设置了一个可以通过FastAPI热更新的全局变量PUSH_STATUS，用来控制推送姬是否推送开播与下播的通知。
 
 # 4 代码仍存在的不足
 
