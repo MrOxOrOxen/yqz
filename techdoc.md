@@ -4,7 +4,7 @@
 
 *Developed and written by 晚安卡米宝宝
 
-*Last updated on 16 Aug, 2026*
+*Last updated on 17 Aug, 2026*
 
 # 0 需要先知道的一些内容
 
@@ -428,6 +428,8 @@ is_birthday_msg_sent为云崎早生日彩蛋的控制变量。类似于is_birthd
 ```python
 {"uid": xxx. "uname": "xxx", "time": xxx, "battery": xxx, "content": xxx}
 ```
+
+当同一用户送出新的礼物，但修改了用户名时，gift_json以及box.json的用户名会被同步修改，同时其余json或jsonl文件新增的礼物数据中，用户名会按照新的名字来记录。
 
 ### 2.2.2 内存加载与释放
 
