@@ -18,6 +18,9 @@ import subprocess
 import sys
 from typing import Optional, Union
 import signal, atexit, traceback
+from contextlib import asynccontextmanager
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from lunar import is_birthday_today
 
 from ids import *
 from logger import add_log, log_buffer
@@ -35,11 +38,14 @@ import eggs
 from eggs import *
 from hotreload_config import HOT_RELOAD_CONFIG
 
+import hotglobal
+
 # request_settings.set("impersonate", "chrome131")
 select_client("aiohttp")
 
 STATUS = 1
 LIVE_STATUS = 0
+# PUSH_STATUS = 1
 
 # code hot update
 _hot_reload_state = {}
@@ -115,6 +121,7 @@ async def init_get_room_status():
 
 # 计算大航海连开数量
 def calc_guard_combo(gift_name, total_battery):
+    total_battery = int(round(total_battery))
     base = COMBO_GUARD_PRICE.get(gift_name, 1680)
     remainder = total_battery % base
     first_map = GUARD_FIRST_PRICE.get(gift_name, {})
@@ -262,6 +269,7 @@ async def periodic_tasks():
                     MEMORY["danmu"].clear()
 
                 MEMORY["audience"]["interact_cache"] = list(interact_cache)
+                MEMORY["audience"]["birthday_cache"] = list(birthday_cache)
                 save_json("files/audience.json", MEMORY["audience"])
 
                 try:
@@ -333,6 +341,7 @@ async def periodic_tasks():
             save_json("files/meta.json", MEMORY["meta"])
         if MEMORY["audience"]:
             MEMORY["audience"]["interact_cache"] = list(interact_cache)
+            MEMORY["audience"]["birthday_cache"] = list(birthday_cache)
             save_json("files/audience.json", MEMORY["audience"])
         if MEMORY["danmu"]:
             append_to_jsonl("files/danmu.jsonl", MEMORY["danmu"])
@@ -401,7 +410,7 @@ async def on_danmaku(event):
 
     if LIVE_STATUS == 1:
         # check_hot_reload()
-        await danmu_egg(DANMU_COUNT)
+        await danmu_egg(uid, msg, DANMU_COUNT)
         update_danmu_log(uid, uname, msg)
 
 @room.on('SEND_GIFT')
@@ -551,7 +560,7 @@ async def handle_guard(event):
 
 @room.on('INTERACT_WORD_V2')
 async def interact_word(event):
-    global interact_cache, LIVE_STATUS, STATUS
+    global interact_cache, birthday_cache, LIVE_STATUS, STATUS
     if LIVE_STATUS != 1:
         return
 
@@ -564,63 +573,86 @@ async def interact_word(event):
     medal = user_info.get('medal') if user_info else None
     uid = user_info.get('uid', 0) if user_info else 0
     reply = None
+    msg = None
+    trigger_birthday = False
+    trigger_interact = False
+
+    if uid in BIRTHDAY_MAP and uid not in birthday_cache:
+        map_uid = BIRTHDAY_MAP[uid]
+        birthday_str, is_moon, night_agree, only_leap = map_uid[0], map_uid[2], map_uid[3], map_uid[4]
+        if is_birthday_today(birthday_str, is_moon, only_leap):
+            trigger_birthday = True
+            if night_agree != 1:
+                if datetime.now().strftime("%H%M") < "0800":
+                    trigger_birthday = False
+            
+            if trigger_birthday:
+                msg = map_uid[1].format(uname=uname)
+                birthday_cache.add(uid)
+                MEMORY["audience"]["birthday_cache"] = list(birthday_cache)
+                save_json("files/audience.json", MEMORY["audience"])
     
-    if uid in interact_cache and uid != ADMIN_ID:
+    trigger_interact = (uid not in interact_cache) or (uid == ADMIN_ID)
+    if trigger_interact:
+        if uid == ADMIN_ID:
+            if STATUS != 0:
+                if STATUS == 2: STATUS = 1
+                target_date = datetime(2026, 3, 20)
+                today = datetime.now().date()
+                days_passed = abs((target_date.date() - today).days) + 1
+                if today.month == 5 and today.day == 3:
+                    reply = "[欢迎姬]今天是云宝的生日哎！卡米宝宝祝全世界最最最可爱的云宝生日快乐！"
+                elif today.month == 10 and today.day == 3:
+                    reply = "[欢迎姬]今天是卡米宝宝的生日哎！"
+                elif days_passed % 100 == 0 or days_passed == 50:
+                    reply = f"[欢迎姬]哇！今天是卡米宝宝和云宝相遇的{days_passed}天哎！{days_passed}天快乐！"
+                elif today.month == 3 and today.day == 20:
+                    years_passed = today.year - 2026
+                    reply = f"[欢迎姬]哇！今天是卡米宝宝和云宝相遇的{years_passed}周年哎！{years_passed}周年快乐！"
+                else:
+                    reply = f"[欢迎姬]报告！发现{days_passed}个卡米宝宝进入云宝的直播间！"
+            else:
+                reply = "[欢迎姬]哎？卡米宝宝不是睡了吗？怎么又回来了？"
+                STATUS = 1
+                if uid in interact_cache:
+                    add_log(f"[欢迎姬] 卡米宝宝没有睡觉")
+
+        elif uid == ASPK_ID:
+            reply = f"[欢迎姬]欢迎帅神！！"
+
+        elif medal and uid not in REFUSE_WELCOME_LIST:
+            medal_name = medal.get('name', None)
+            medal_level = medal.get('level', 0)
+            if medal_name == "早崎鸭":
+                if uid == YQZ_ID:
+                    if int(time.time()) - MEMORY["meta"]["live_time"] <= 120:
+                        current_timestr = datetime.now().strftime("%H%M")
+                        if current_timestr >= "0330" and current_timestr <= "1000":
+                            reply = "[欢迎姬]早上好云宝！今天也要认真工作哦！"
+                        elif current_timestr > "1000" and current_timestr <= "1300":
+                            reply = "[欢迎姬]中午好云宝！今天也要认真工作哦！"
+                        elif current_timestr > "1300" and current_timestr <= "1630":
+                            reply = "[欢迎姬]下午好云宝！今天也要认真工作哦！"
+                        else:
+                            reply = "[欢迎姬]晚上好云宝！今天也要认真工作哦！"
+                    else:
+                        reply = "[欢迎姬]报告！发现云崎早_haya同学进入直播间！"
+                elif uid in WELCOME_MAP:
+                    reply = WELCOME_MAP[uid].format(uname=uname)
+                elif medal_level > 30:
+                    if len(uname) > 16:
+                        uname = uname[:13] + "..."
+                    reply = f"[欢迎姬]报告！一只叫{uname}的早崎鸭偷偷进入了直播间！" 
+
+        MEMORY["audience"]["total_audience"] = MEMORY["audience"].get("total_audience", 0) + 1
+        interact_cache.add(uid)
+        MEMORY["audience"]["interact_cache"] = list(interact_cache)
+        # save_json("files/audience.json", MEMORY["audience"])
+
+    else:
         if uid == YQZ_ID:
             reply = f"[欢迎姬]报告！发现云崎早_haya同学进入直播间！"
             add_log("[欢迎姬] 云崎早同学又一次进入直播间")
-            await reply_queue.put((YQZ_ID, reply))
-        return
-
-    if uid == ADMIN_ID:
-        if STATUS != 0:
-            if STATUS == 2: STATUS = 1
-            if uid in interact_cache:
-                return
-            target_date = datetime(2026, 3, 20)
-            today = datetime.now().date()
-            days_passed = abs((target_date.date() - today).days) + 1
-            if today.month == 5 and today.day == 3:
-                reply = "[欢迎姬]今天是云宝的生日哎！卡米宝宝祝全世界最最最可爱的云宝生日快乐！"
-            elif today.month == 10 and today.day == 3:
-                reply = "[欢迎姬]今天是卡米宝宝的生日哎！"
-            elif days_passed % 100 == 0 or days_passed == 50:
-                reply = f"[欢迎姬]哇！今天是卡米宝宝和云宝相遇的{days_passed}天哎！{days_passed}天快乐！"
-            elif today.month == 3 and today.day == 20:
-                years_passed = today.year - 2026
-                reply = f"[欢迎姬]哇！今天是卡米宝宝和云宝相遇的{years_passed}周年哎！{years_passed}周年快乐！"
-            else:
-                reply = f"[欢迎姬]报告！发现{days_passed}个卡米宝宝进入云宝的直播间！"
-        else:
-            reply = "[欢迎姬]哎？卡米宝宝不是睡了吗？怎么又回来了？"
-            STATUS = 1
-            if uid in interact_cache:
-                await reply_queue.put((YQZ_ID, reply))
-                add_log(f"[欢迎姬] 卡米宝宝没有睡觉")
-                return
-
-    elif uid == ASPK_ID:
-        reply = f"[欢迎姬]欢迎帅神！！"
-    elif medal and uid not in REFUSE_WELCOME_LIST:
-        medal_name = medal.get('name', None)
-        medal_level = medal.get('level', 0)
-        if medal_name == "早崎鸭":
-            if uid == YQZ_ID:
-                if int(time.time()) - MEMORY["meta"]["live_time"] <= 120:
-                    reply = "[欢迎姬]欢迎云宝！今天也要认真工作哦！"
-                else:
-                    reply = "[欢迎姬]报告！发现云崎早_haya同学进入直播间！"
-            elif uid in WELCOME_MAP:
-                reply = WELCOME_MAP[uid].format(uname=uname)
-            elif medal_level > 30:
-                if len(uname) > 16:
-                    uname = uname[:13] + "..."
-                reply = f"[欢迎姬]报告！一只叫{uname}的早崎鸭偷偷进入了直播间！" 
-
-    MEMORY["audience"]["total_audience"] = MEMORY["audience"].get("total_audience", 0) + 1
-    interact_cache.add(uid)
-    MEMORY["audience"]["interact_cache"] = list(interact_cache)
-    # save_json("files/audience.json", MEMORY["audience"])
             
     if reply is not None:
         if uid in GACHI_GACHI_ID or uid == GACHI_ID[3] or uid == ADMIN_ID:
@@ -628,6 +660,11 @@ async def interact_word(event):
         else:
             await reply_queue.put((uid, reply))
         add_log(f"[欢迎姬] 欢迎{uname}")
+
+    if msg is not None:
+        await reply_queue.put((YQZ_ID, msg))
+        add_log(f"[欢迎姬] {uname}的生日")
+
 
 @room.on('COMMON_NOTICE_DANMAKU')
 async def on_common_notice_danmaku(event):
@@ -640,6 +677,8 @@ async def on_common_notice_danmaku(event):
         return
 
     content_segments = data.get('content_segments', [])
+    if len(content_segments) < 3:
+        return
     
     if content_segments[1].get('text', '') == "投喂":
         uname, gift_name = content_segments[0]['text'], content_segments[2]['text']
@@ -697,26 +736,34 @@ async def on_common_notice_danmaku(event):
 
 @room.on('LIVE')
 async def on_live(event):
-    global LIVE_STATUS
-    LIVE_STATUS = 1
     add_log("[LOG] LIVE")
-    live_time = datetime.now().strftime("%H:%M")
-    live_timestamp = int(time.time())
-    if live_timestamp - MEMORY["meta"]["live_time"] <= 5:
-        return
-    MEMORY["meta"]["live_time"] = live_timestamp
-    # save_json("files/meta.json", MEMORY["meta"])
+    global LIVE_STATUS
 
-    title = MEMORY["meta"].get("title", "")
+    title = MEMORY["meta"]["title"]
     room_data = {}
     try:
         room_info = live.LiveRoom(ROOM_ID)
         info = await room_info.get_room_info()
         room_data = info.get("room_info", {})
         title = room_data.get("title", "")
-        MEMORY["meta"]["title"] = title
     except Exception as e:
         add_log(f"[ERROR] 获取直播间标题失败: {e}")
+
+    if LIVE_STATUS == 1:
+        if title and title != MEMORY["meta"]["title"]:
+            MEMORY["meta"]["title"] = title
+            save_json("files/meta.json", MEMORY["meta"])
+        return
+
+    MEMORY["meta"]["title"] = title
+    LIVE_STATUS = 1
+
+    live_time = datetime.now().strftime("%H:%M")
+    live_timestamp = int(time.time())
+    if live_timestamp - MEMORY["meta"]["live_time"] <= 5:
+        return
+    MEMORY["meta"]["live_time"] = live_timestamp
+    # save_json("files/meta.json", MEMORY["meta"])
     
     save_json("files/meta.json", MEMORY["meta"])
 
@@ -739,8 +786,13 @@ async def on_live(event):
         # for gid in TARGET_GROUP_LIST:
         #     await qq.send_mixed(segments, at_all=True, group_id=gid)
         #     await asyncio.sleep(3)
-        tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
-        await asyncio.gather(*tasks, return_exceptions=True)
+        if hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_TIMES <= 6:
+            tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
+            await asyncio.gather(*tasks, return_exceptions=True)
+            hotglobal.increment_push_times()
+            add_log(f"PUSH_STATUS: {hotglobal.PUSH_TIMES-1} -> {hotglobal.PUSH_TIMES}")
+        else:
+            return
         # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
         # await asyncio.sleep(5)
         # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
@@ -754,8 +806,13 @@ async def on_live(event):
         # for gid in TARGET_GROUP_LIST:
         #     await qq.send_mixed(segments, at_all=True, group_id=gid)
         #     await asyncio.sleep(3)
-        tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
-        await asyncio.gather(*tasks, return_exceptions=True)
+        if hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_TIMES <= 6:
+            tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
+            await asyncio.gather(*tasks, return_exceptions=True)
+            hotglobal.increment_push_times()
+            add_log(f"PUSH_TIMES: {hotglobal.PUSH_TIMES-1} -> {hotglobal.PUSH_TIMES}")
+        else:
+            return
         # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
         # await asyncio.sleep(5)
         # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
@@ -773,6 +830,8 @@ async def on_live(event):
 @room.on('PREPARING')
 async def on_preparing(event):
     global LIVE_STATUS
+    if LIVE_STATUS != 1:
+        return
     LIVE_STATUS = 0
     add_log("[LOG] PREPARING")
     prepare_time = datetime.now().strftime("%H:%M")
@@ -794,8 +853,13 @@ async def on_preparing(event):
         # for gid in TARGET_GROUP_LIST:
         #     await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=gid)
         #     await asyncio.sleep(3)
-        tasks = [qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
-        await asyncio.gather(*tasks, return_exceptions=True)
+        if hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_TIMES <= 6:
+            tasks = [qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
+            await asyncio.gather(*tasks, return_exceptions=True)
+            hotglobal.increment_push_times()
+            add_log(f"PUSH_TIMES: {hotglobal.PUSH_TIMES-1} -> {hotglobal.PUSH_TIMES}")
+        else:
+            return
         # await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP)
         # await asyncio.sleep(5)
         # await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP_FANS)
@@ -1076,7 +1140,16 @@ async def on_fans_club_poke_gift_notice(event):
 '''
 
 # FastAPI & SSL Patch
-app = FastAPI()
+scheduler = AsyncIOScheduler()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler.add_job(hotglobal.daily_reset_push_times, 'cron', hour=0, minute=0)
+    scheduler.start()
+    yield
+    scheduler.shutdown()
+
+app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -1418,6 +1491,20 @@ def api_set_status(data: StatusInput):
     add_log(f"[HOT UPDATE] STATUS set to {STATUS}")
     return {"status": "success", "current_status": STATUS}
 
+# 更改推送姬状态
+class PushStatusInput(BaseModel):
+    push_status: int
+@app.post("/api/push_status")
+def api_push_status(data: PushStatusInput):
+    '''
+    curl -X POST "http://127.0.0.1:8000/api/push_status" \
+        -H "Content-Type: application/json" \
+        -d '{"push_status": 0}'
+    '''
+    hotglobal.PUSH_STATUS = data.push_status
+    add_log(f"[HOT UPDATE] STATUS set to {hotglobal.PUSH_STATUS}")
+    return {"status": "success", "current_push_status": hotglobal.PUSH_STATUS}
+
 def patch_ssl():
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
@@ -1440,6 +1527,7 @@ def _do_emergency_save(source="unknown"):
             save_json("files/meta.json", MEMORY["meta"])
         if MEMORY.get("audience"):
             MEMORY["audience"]["interact_cache"] = list(interact_cache)
+            MEMORY["audience"]["birthday_cache"] = list(birthday_cache)
             save_json("files/audience.json", MEMORY["audience"])
         if MEMORY.get("danmu"):
             append_to_jsonl("files/danmu.jsonl", MEMORY["danmu"])
@@ -1457,6 +1545,7 @@ async def main():
     add_log("=== Start ===")
     await init_get_room_status()
     load_json_files()
+    hotglobal.load_push_times()
 
     for filename, config in HOT_RELOAD_CONFIG.items():
         filepath = os.path.join(os.path.dirname(__file__), filename)

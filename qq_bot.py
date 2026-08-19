@@ -9,6 +9,10 @@ import time
 import uuid
 import os
 import base64
+from datetime import datetime
+import hotglobal
+
+# baseline_end = datetime(2026, 8, 16, 23, 59, 59)
 
 async def download_image(url: str) -> str:
     """下载网络图片到本地临时目录，返回本地绝对路径"""
@@ -333,10 +337,13 @@ async def dynamic_monitor(qq_bot):
 
                     segments.append({"type": "text", "data": {"text": f"动态地址：{link}"}})
 
-                    if qq_bot:
-                        pass
+                    # current_time = datetime.now()
+                    if qq_bot and hotglobal.PUSH_STATUS == 1:
+                        # if current_time > baseline_end:
                         tasks = [qq_bot.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
                         await asyncio.gather(*tasks, return_exceptions=True)
+                        # else:
+                        #     pass
                         # await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
                         # await asyncio.sleep(5)
                         # await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
@@ -441,10 +448,14 @@ async def dynamic_monitor(qq_bot):
                     '''
                     segments.append({"type": "text", "data": {"text": f"{header}\n云崎早_haya 发布了新动态！\n\n（该动态类型暂不支持解析：{dyn_type}）\n\n===\n动态地址：{link}"}})
                     '''
-                if qq_bot and segments != []:
-                    pass
+                
+                # current_time = datetime.now()
+                if qq_bot and segments != [] and hotglobal.PUSH_STATUS == 1:
+                    # if current_time > baseline_end:
                     tasks = [qq_bot.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
                     await asyncio.gather(*tasks, return_exceptions=True)
+                    # else:
+                    #     pass
                     # await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
                     # await asyncio.sleep(5)
                     # await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)

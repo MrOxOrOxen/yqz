@@ -100,7 +100,7 @@ async def check_global_loss_warning(uid, uname):
         add_log(f"[盲盒姬] total_net > 15000")
 
 # danmu_egg不可热修改
-async def danmu_egg(count=50):
+async def danmu_egg(uid, msg, count):
     async def birthday():
         if datetime.now().strftime("%m%d") != "0503":
             return False
@@ -190,10 +190,24 @@ async def danmu_egg(count=50):
             print(f"统计弹幕失败: {e}")
             return False
 
+    async def group_number(uid, msg):
+        global group_number_last_time
+        if msg == "查询粉丝群" or msg == "查询粉丝群号" or msg == "粉丝群号":
+            group_number_now_time = time.time()
+            if group_number_now_time - group_number_last_time > 10:
+                reply = "[推送姬]粉丝群号是572530723，欢迎早崎鸭加入！"
+                group_number_last_time = group_number_now_time
+                await reply_queue.put((int(uid), reply))
+                add_log("[推送姬]粉丝群号")
+            else:
+                return
+
     await birthday()
     await kfc()
     await castle()
     await oil()
+    await group_number(uid, msg)
+
     # await gachi_combo()
     # await question_mark_combo()
     # await circle_combo()

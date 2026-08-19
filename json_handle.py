@@ -53,17 +53,23 @@ def load_json_files():
                 data = json.load(f)
                 MEMORY["audience"] = {
                     "total_audience": data.get("total_audience", 0),
-                    "interact_cache": data.get("interact_cache", [])
+                    "interact_cache": data.get("interact_cache", []),
+                    "birthday_cache": data.get("birthday_cache", [])
                 }
                 interact_cache.clear()
                 interact_cache.update(data.get("interact_cache", []))
                 add_log(f"Loaded interact_cache with {len(interact_cache)} entries.")
+                birthday_cache.clear()
+                birthday_cache.update(data.get("birthday_cache", []))
+                add_log(f"Loaded birthday_cache with {len(birthday_cache)} entries.")
+                
         except Exception as e:
             add_log(f"[ERROR] Error when reading audience.json: {e}")
 
     else:
-        MEMORY["audience"] = {"total_audience": 0, "interact_cache": []}
+        MEMORY["audience"] = {"total_audience": 0, "interact_cache": [], "birthday_cache": []}
         interact_cache.clear()
+        birthday_cache.clear()
         save_json("files/audience.json", MEMORY["audience"])
         add_log("No audience.json. Total audience starts with 0")
 
