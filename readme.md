@@ -1,12 +1,12 @@
 # 哔哩哔哩直播间&QQ群推送机器人
 
-*Last updated at 16 Aug, 2026*
+*Last updated at 18 Aug, 2026*
 
 Copyright © 2026 云崎早_haya & 晚安卡米宝宝
 
 All rights reserved.
 
-本文件为readme文档。技术文档请参考techdoc.md.
+本文件为readme文档，负责介绍程序主要功能。技术文档请参考techdoc.md.
 
 本机器人为哔哩哔哩用户“云崎早_haya”的直播专用机器人，以及其舰长群与粉丝群的推送机器人。包含以下功能：
 
@@ -197,6 +197,10 @@ All rights reserved.
    - 邮件：admin@yqzhaya.com
 
 ## 更新日志
+
+### 2026.8.18
+
+新增功能：通过预设的生日数据，已定制生日祝福功能的观众在第一次进入直播间时，会收到欢迎姬的生日祝福。
 
 ### 2026.8.16
 
