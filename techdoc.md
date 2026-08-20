@@ -4,7 +4,7 @@
 
 *Developed and written by 晚安卡米宝宝
 
-*Last updated on 17 Aug, 2026*
+*Last updated on 20 Aug, 2026*
 
 # 0 需要先知道的一些内容
 
@@ -36,6 +36,7 @@
 |   - superchat
 | - bili_gift_map.json
 | - bili_gift_map.py
+| - birthday_cache.json
 | - box_bot.py
 | - constants.py
 | - data.py
@@ -47,11 +48,13 @@
 | - ids.py
 | - json_handle.py
 | - logger.py
+| - lunar.py
 | - mail.py
 | - main_v2.py
 | - memory_store.py
 | - qq_bot.py
 | - reset.sh
+| - runtime_state.json
 | - send_reply.py
 | - transfer.py
 | - transfer.sh
@@ -296,6 +299,7 @@ pm2程序重启需要2-3秒的时间，因此若在直播时重启pm2程序，�
 - ids.py: 存储用户uid的程序，这些id大多数用在欢迎姬以及彩蛋中，但也有少部分（比如云崎早自己的uid）用于特殊判断程序中。
 - json_handle.py: 用于程序启动时创建或加载json文件，以及保存或追加保存json文件。
 - logger.py: 将程序输出添加一个时间戳并存储在日志文件中，从而便于在程序出错时判断错误原因。
+- lunar.py: 判断当日是否为用户生日日期（公历或农历，以及农历闰月生日的处理）。
 - mail.py: 发送邮件的程序。
 - memory_store.py: 存储初始化常量，即程序启动时需要调用一次，后续不再调用的常量。
 - send_reply.py: 发送弹幕的程序。
@@ -598,6 +602,8 @@ GUARD_FIRST_PRICE = {
 
 ## 2.6 欢迎姬
 
+### 2.6.1 用户进入直播间时
+
 当观众进入直播间时，不管是不是第一次进入直播间，interact_word_v2事件都会触发。观众第一次进入直播间时，会在audience.json文件中添加观众uid，后续再次进房时会在audience.json里对uid进行校验，如果已经进入过直播间，则不会执行欢迎程序（云崎早本人除外）。
 
 用户进入直播间时，interact_word_v2发送的字典中会包含用户的名称、uid、是否佩戴粉丝团灯牌牌、灯牌名称、灯牌等级、荣耀等级、哔哩哔哩账号等级等等信息。为防止欢迎姬刷屏，设置了佩戴“早崎鸭”粉丝团灯牌且灯牌等级大于等于31级才能走到后续的判断逻辑。
@@ -605,6 +611,67 @@ GUARD_FIRST_PRICE = {
 欢迎姬支持欢迎词定制，拥有定制欢迎词的用户不受31级粉丝牌的限制。欢迎词的归属人以及欢迎词内容被存在constants.py的WELCOME_MAP字典中。
 
 也有一些用户满足了粉丝团灯牌的条件但是不想要欢迎姬的欢迎。针对这种情况，设置了REFUSE_WELCOME_LIST，处于这个list里面的uid在欢迎姬程序中会直接跳出，不会进行任何欢迎。
+
+### 2.6.2 用户生日字典设计
+
+程序中，手动录入的生日信息birthday_raw通过程序处理后，生成用户生日字典BIRTHDAY_MAP. 
+
+BIRTHDAY_MAP的结构如下：
+
+```python
+{
+    uid: [mmdd, msg, is_moon, night_agree, only_leap],
+    uid: [mmdd, msg, is_moon, night_agree, only_leap]
+}
+```
+
+列表内元素含义（即lunar.py与main_v2.py中的处理逻辑）：
+
+- mmdd：字符串格式，通常为"mmdd"形式，用来存储用户生日月份与日期。以"-mmdd"形式存储时，表示农历闰月生日。
+- msg：字符串格式，用来存储用户自定义的生日祝福内容；
+- is_moon：0或1，是否为农历生日；
+- night_agree：0或1，生日消息推送模式。1代表0:00时若云宝在播，则立即推送；0代表暂不推送，等到当天晚上再推送；
+- only_leap: 0或1，仅在mmdd中录入的是农历闰月生日时才生效，决定对于农历闰月生日的用户，在平年时是否过平月生日，为1则不过，为0则为过。
+
+列表内元素初始值：
+
+- msg: "\[欢迎姬\]今天是{uname}老师的生日，让我们祝ta生日快乐！"，后续用format(uname)处理用户名；
+- is_moon: 0
+- night_agree: 1
+- only_leap: 1
+
+birthday_raw支持的数据录入类型：
+
+```python
+{
+    uid: "xxx",
+    uid: ("xxx", "xxx", xxx),
+    uid: {"mmdd": "xxx", "is_moon": xxx}
+}
+```
+
+此外，还支持用list包裹的以上各种录入类型的组合。也就是说，可以支持同一个人录入多个生日。
+
+程序中，对于birthday_raw的不同录入数据类型，处理方案如下：
+
+- 仅录入字符串：字符串为生日日期信息，其余值为默认值；
+- 录入元组：对元组解包，按顺序对应list中的元素，其余值为默认值；
+- 录入字典：对字典解包，按key名称对应list中的元素，其余值为默认值；
+- 录入列表：先通过for循环拆解列表，再按照上面的数据处理方法处理。
+
+由此，得到闰年闰月出生的用户的数据录入方式：
+
+- 只过闰月：uid: {"mmdd": "-xxxx", "is_moon": 1}
+- 平年平月和闰年闰月：uid: {"mmdd": "-xxxx", "is_moon": 1, "only_leap": 0}
+- 平年平月和闰年平月：uid: {"mmdd": "xxx", "is_moon": 1}
+
+### 2.6.3 用户过生日时
+
+同样使用interact_word_v2接口，当观众进入直播间时，通过BIRTHDAY_MAP判断用户是否符合发送条件。若符合条件，则发送对应的生日祝福文本。
+
+事件触发后，将用户uid存入birthday_cache.json中。后续用户再次进房时会在birthday_cache.json里对uid进行校验，如果已经进入过直播间，则不会执行生日祝福程序。
+
+birthday_cache会在每天0:00自动清空。由于其为独立的json文件，其内容不会受到每天7:59程序重启的影响。
 
 ## 2.7 彩蛋设置
 
@@ -778,7 +845,21 @@ payload = {
 
 ## 3.5 紧急停止
 
-考虑到云宝可能由于反复开播下播导致推送姬在群里刷屏，设置了一个可以通过FastAPI热更新的全局变量PUSH_STATUS，用来控制推送姬是否推送开播与下播的通知。
+考虑到云宝可能由于反复开播下播导致推送姬在群里刷屏，以及推送姬账号一天只能@10次全体成员，因此程序设置了一个在开播与下播时自动更新的json文件runtime_state.json，用来控制推送姬是否推送开播与下播的通知。
+
+runtime_state的结构为：
+
+```python
+{
+    "date": "xxx",
+    "push_times": xxx
+}
+```
+
+push_times表示当天已经推送过的开播与下播消息次数（动态推送不计入），其会在每天0:00时自动归零，由于是json文件，因此不受每天7:59程序重启的影响。
+
+当runtime_state.json中push_times大于6，即推送姬在这一天里已经推送了6条开播下播消息时，推送姬会拒绝推送开播与下播消息，但动态消息仍会正常推送。
+
 
 # 4 代码仍存在的不足
 
