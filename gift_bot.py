@@ -75,6 +75,11 @@ def thank_gift(uid, uname, gift_name, gift_value, cnt=1):
         return f"[礼物姬]哇！感谢{uname}老师送出的{gift_value/10:.0f}元SC！老板大气！" if uid != ADMIN_ID else f"[礼物姬]哇！感谢卡米宝宝送出的{gift_value/10:.0f}元SC！老板大气！"
 
     elif gift_name in ["舰长", "提督", "总督", "大航海"]:
+        if uid == 500347829:
+            return f"[礼物姬]爽睡你的19级牌子不要了喵？"
+        elif uid == 15247674:
+            return f"[扬帆起航]扬帆起航！长风破浪会有时，直挂云帆济沧海！"
+
         if len(uname) > 14: uname = uname[:11] + "..."
         if uid == ADMIN_ID and gift_name == "舰长" and cnt == 12:
             return f"[礼物姬]哇！感谢卡米宝宝的提督！老板大气！"

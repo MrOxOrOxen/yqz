@@ -174,7 +174,7 @@ async def danmu_egg(uid, msg, count):
         if MEMORY["meta"]["is_oil_msg_sent"] == True:
             return False
 
-        if YANCHENGCHUAN_ID in MEMORY["audience"]["interact_cache"]:
+        if 15247674 in MEMORY["audience"]["interact_cache"]:
             return False
 
         try:
@@ -313,7 +313,7 @@ async def gift_egg(uid, uname, gift_name, num, single_battery):
 async def sc_egg(uid, uname, battery, message):
     async def shennai(uid, message):
         keywords = ["购", "溜", "狗", "66", "√", "遛"]
-        if uid == SHENNAI_ID and any(k in message for k in keywords):
+        if uid == 51422524 and any(k in message for k in keywords):
             MEMORY["meta"]["dog"] += 1
             save_json("files/meta.json", MEMORY["meta"])
             dog_msg = f"[礼物姬]每日遛狗（{MEMORY['meta']['dog']}/1）"
@@ -323,11 +323,6 @@ async def sc_egg(uid, uname, battery, message):
     await shennai(uid, message)
 
 async def guard_egg(uid, uname, guard_name, price, cnt):
-    async def shuangshui(uid):
-        if uid == SHUANGSHUI_ID:
-            await reply_queue.put((uid, "[礼物姬]爽睡你的19级牌子不要了喵？"))
-            add_log(f"[礼物姬] shuangshui")
-
     # 由于thank_guard中@的人不一样，需要单独列出
     async def birthday_thank_guard(uid, uname, guard_name):
         if guard_name == "总督":
@@ -351,7 +346,7 @@ async def guard_egg(uid, uname, guard_name, price, cnt):
                 reply2 = "[礼物姬]谢谢你愿意给云崎早分一口生日蛋糕！！"
                 await reply_queue.put((uid, reply1))
                 await reply_queue.put((uid, reply2))
-        elif guard_name == "舰长" and uid != JUNBEN_ID:
+        elif guard_name == "舰长" and uid != 671139769:
             if uid == GACHI_ID[3]:
                 reply = "[from 庄生梦方宜]新的一岁，愿你被人爱，也被人照顾。"
                 await reply_queue.put((YQZ_ID, reply))
@@ -362,5 +357,5 @@ async def guard_egg(uid, uname, guard_name, price, cnt):
             pass
         add_log(f"[礼物姬]感谢{uname}的{guard_name}")
 
-    await shuangshui(uid)
     # await birthday_thank_guard(uid, uname, guard_name)
+    pass
