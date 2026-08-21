@@ -1,6 +1,6 @@
 # 哔哩哔哩直播间&QQ群推送机器人
 
-*Last updated at 21 Aug, 2026*
+*Last updated at 22 Aug, 2026*
 
 Copyright © 2026 云崎早_haya & 晚安卡米宝宝
 
@@ -222,6 +222,11 @@ All rights reserved.
    - 邮件：admin@yqzhaya.com
 
 ## 更新日志
+
+### 2026.8.22
+
+1. 移除周年庆更新；
+2. 推送姬推送动态时，若有大于1条动态待推送，每条动态之间会延迟3秒钟（原来为同时推送）。
 
 ### 2026.8.21
 
