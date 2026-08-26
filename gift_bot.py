@@ -51,6 +51,7 @@ async def handle_total_gift_reply(uid, profit):
 
     while profit >= next_t:
         gear += 1
+        # random_step = random.randint(30000, 40000)
         random_step = random.randint(4000, 5000)
         next_t += random_step
         triggered = True
@@ -72,9 +73,10 @@ def thank_gift(uid, uname, gift_name, gift_value, cnt=1):
     if gift_name == "SuperChat":
         if len(uname) > 12:
             uname = uname[:9] + "..."
-        return f"[礼物姬]哇！感谢{uname}老师送出的{gift_value/10:.0f}元SC！老板大气！" if uid != ADMIN_ID else f"[礼物姬]哇！感谢卡米宝宝送出的{gift_value/10:.0f}元SC！老板大气！"
+        return f"[礼物姬]哇！感谢{uname}老师的{gift_value/10:.0f}元SC！老板大气！" if uid != ADMIN_ID else f"[礼物姬]哇！感谢卡米宝宝的{gift_value/10:.0f}元SC！老板大气！"
 
     elif gift_name in ["舰长", "提督", "总督", "大航海"]:
+        # return None # for annual
         if uid == 500347829:
             return f"[礼物姬]爽睡你的19级牌子不要了喵？"
         elif uid == 15247674:

@@ -39,6 +39,8 @@ from eggs import *
 from hotreload_config import HOT_RELOAD_CONFIG
 
 import hotglobal
+import birthday_cache_manage
+import livetime
 
 # request_settings.set("impersonate", "chrome131")
 select_client("aiohttp")
@@ -49,6 +51,39 @@ LIVE_STATUS = 0
 
 # code hot update
 _hot_reload_state = {}
+
+# BIRTHDAY_CACHE_FILE = "stable_json/birthday_cache.json"
+
+'''
+def load_birthday_cache():
+    global birthday_cache
+    if os.path.exists(BIRTHDAY_CACHE_FILE):
+        try:
+            with open(BIRTHDAY_CACHE_FILE, "r", encoding='utf-8') as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                birthday_cache = set(data)
+            else:
+                birthday_cache = set()
+        except Exception as e:
+            add_log(f"读取 birthday_cache.json 失败: {e}")
+            birthday_cache = set()
+    else:
+        birthday_cache = set()
+        try:
+            with open(BIRTHDAY_CACHE_FILE, "w", encoding='utf-8') as f:
+                json.dump([], f)
+        except Exception as e:
+            add_log(f"创建 birthday_cache.json 失败: {e}")
+
+def save_birthday_cache():
+    save_json(BIRTHDAY_CACHE_FILE, list(birthday_cache))
+
+def daily_reset_birthday_cache():
+    birthday_cache.clear()
+    save_birthday_cache()
+    add_log("[定时任务] birthday_cache.json 已在 0:00 定时清空")
+'''
 
 def check_hot_reload():
     for filename, state in _hot_reload_state.items():
@@ -175,7 +210,7 @@ def update_gift_summary(uid, uname, gift_name, num, battery):
         user["gift_list"][gift_name] = user["gift_list"].get(gift_name, 0) + num
 
 def update_box_summary(uid, uname, count, cost, profit, original_box_name):
-    original_box_name = BOX_MEMORY_MAP.get(original_box_name, original_box_name)
+    # original_box_name = BOX_MEMORY_MAP.get(original_box_name, original_box_name)
     uid_str = str(uid)
     if uid_str not in MEMORY["box"]:
         MEMORY["box"][uid_str] = {
@@ -269,7 +304,7 @@ async def periodic_tasks():
                     MEMORY["danmu"].clear()
 
                 MEMORY["audience"]["interact_cache"] = list(interact_cache)
-                MEMORY["audience"]["birthday_cache"] = list(birthday_cache)
+                # MEMORY["audience"]["birthday_cache"] = list(birthday_cache)
                 save_json("files/audience.json", MEMORY["audience"])
 
                 try:
@@ -341,7 +376,7 @@ async def periodic_tasks():
             save_json("files/meta.json", MEMORY["meta"])
         if MEMORY["audience"]:
             MEMORY["audience"]["interact_cache"] = list(interact_cache)
-            MEMORY["audience"]["birthday_cache"] = list(birthday_cache)
+            # MEMORY["audience"]["birthday_cache"] = list(birthday_cache)
             save_json("files/audience.json", MEMORY["audience"])
         if MEMORY["danmu"]:
             append_to_jsonl("files/danmu.jsonl", MEMORY["danmu"])
@@ -352,7 +387,7 @@ async def periodic_tasks():
 # 监听
 room = live.LiveDanmaku(ROOM_ID, credential=credential)
 
-box_names_pattern = '|'.join(re.escape(name) for name in BOX_NAME_LIST)
+# box_names_pattern = '|'.join(re.escape(name) for name in BOX_NAME_LIST)
 
 @room.on('DANMU_MSG')
 async def on_danmaku(event):
@@ -385,27 +420,27 @@ async def on_danmaku(event):
         await call_at_gift(uid, uname, msg)
     
     # 月度全局盲盒姬
-    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:{box_names_pattern})?盲盒姬总部$', msg):
+    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(.*?)盲盒姬总部$', msg):
         await call_month_all_box(uid, uname, msg)
     
     # 指定uid月度盲盒姬
-    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:{box_names_pattern})?盲盒姬@(\d+)$', msg):
+    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(.*?)盲盒姬@(\d+)$', msg):
         await call_month_at_box(uid, uname, msg)
     
     # 月度盲盒姬
-    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:{box_names_pattern})?盲盒姬$', msg):
+    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(.*?)盲盒姬$', msg):
         await call_month_box(uid, uname, msg)
     
     # 全局盲盒姬
-    elif re.search(rf'^呼叫(?:{box_names_pattern})?盲盒姬总部$', msg):
+    elif re.search(rf'^呼叫(.*?)盲盒姬总部$', msg):
         await call_all_box(uid, uname, msg)
     
     # 指定uid盲盒姬
-    elif re.search(rf'^呼叫(?:{box_names_pattern})?盲盒姬@(\d+)$', msg):
+    elif re.search(rf'^呼叫(.*?)盲盒姬@(\d+)$', msg):
         await call_at_box(uid, uname, msg)
     
     # 盲盒姬
-    elif re.search(rf'^呼叫(?:{box_names_pattern})?盲盒姬$', msg):
+    elif re.search(rf'^呼叫(.*?)盲盒姬$', msg):
         await call_box(uid, uname, msg)
 
     if LIVE_STATUS == 1:
@@ -441,6 +476,7 @@ async def on_gift(event):
         await check_global_loss_warning(uid, uname)
 
         if g_profit_battery >= 1000:
+        # if g_profit_battery >= 5000: # for annual
             reply = thank_gift(uid, uname, gift_name, g_profit_battery)
             if reply:
                 await handle_thank_reply(uid, uname, reply)
@@ -558,13 +594,44 @@ async def handle_guard(event):
     )
 '''
 
-@room.on('INTERACT_WORD_V2')
-async def interact_word(event):
+# @room.on('INTERACT_WORD_V2')
+# async def interact_word(event):
+
+@room.on('ENTRY_EFFECT')
+async def on_entry_effect(event):
     global interact_cache, birthday_cache, LIVE_STATUS, STATUS
+    
+    # print(f"ENTRY_EFFECT: {event}")
+    # with open("debug/entry_effect.json", "a", encoding="utf-8") as f:
+    #     json.dump(event, f, ensure_ascii=False, indent=2)
+    '''
+    try:
+        with open("error_log.json", "a", encoding="utf-8") as f:
+            json.dump(event, f, ensure_ascii=False, indent=2)
+    except:
+        pass
+
+    try:
+        pb = event["data"]["data"].get("pb_decoded", {})
+        print(
+            f"[HANDLER INTERACT] "
+            f"uid={pb.get('uid')} "
+            f"uname={pb.get('uname')}"
+        )
+    except Exception as e:
+        print("[HANDLER ERROR]", repr(e))
+    '''
+
     if LIVE_STATUS != 1:
         return
 
     data = event['data']['data']
+    uname = data.get("uinfo", {}).get("base", {}).get("name", "")
+    uid = data.get("uinfo", {}).get("uid", 0)
+    medal = data.get("uinfo", {}).get("medal", {})
+    guard_level = data.get("uinfo", {}).get("guard", {}).get("level", 0)
+    add_log(f"{uname}, {uid}, {medal['name']}, {medal['level']}, {guard_level}")
+    '''
     pb_decoded = data.get('pb_decoded', {})
     if not pb_decoded:
         return
@@ -572,6 +639,8 @@ async def interact_word(event):
     user_info = pb_decoded.get('user_info', {})
     medal = user_info.get('medal') if user_info else None
     uid = user_info.get('uid', 0) if user_info else 0
+    '''
+
     reply = None
     msg = None
     trigger_birthday = False
@@ -579,32 +648,31 @@ async def interact_word(event):
 
     if uid in BIRTHDAY_MAP and uid not in birthday_cache:
         map_uid = BIRTHDAY_MAP[uid]
-        birthday_str, is_moon, night_agree, only_leap = map_uid[0], map_uid[2], map_uid[3], map_uid[4]
-        if is_birthday_today(birthday_str, is_moon, only_leap):
-            trigger_birthday = True
-            if night_agree != 1:
-                if datetime.now().strftime("%H%M") < "0800":
-                    trigger_birthday = False
-            
-            if trigger_birthday:
-                msg = map_uid[1].format(uname=uname)
-                birthday_cache.add(uid)
-                MEMORY["audience"]["birthday_cache"] = list(birthday_cache)
-                save_json("files/audience.json", MEMORY["audience"])
-    
+        for birthday_str, msg_temp, is_moon, night_agree, only_leap in map_uid:
+            if is_birthday_today(birthday_str, is_moon, only_leap):
+                trigger_birthday = True
+                if night_agree != 1:
+                    if datetime.now().strftime("%H%M") < "0800":
+                        trigger_birthday = False
+                
+                if trigger_birthday:
+                    msg = msg_temp.format(uname=uname)
+                    birthday_cache.add(uid)
+                    birthday_cache_manage.save_birthday_cache()
+                    # MEMORY["audience"]["birthday_cache"] = list(birthday_cache)
+                    # save_json("files/audience.json", MEMORY["audience"])
+                    break
+
     trigger_interact = (uid not in interact_cache) or (uid == ADMIN_ID)
     if trigger_interact:
+        # add_log(f"INTERACT_WORD_V2: {event}")
         if uid == ADMIN_ID:
             if STATUS != 0:
                 if STATUS == 2: STATUS = 1
                 target_date = datetime(2026, 3, 20)
                 today = datetime.now().date()
                 days_passed = abs((target_date.date() - today).days) + 1
-                if today.month == 5 and today.day == 3:
-                    reply = "[欢迎姬]今天是云宝的生日哎！卡米宝宝祝全世界最最最可爱的云宝生日快乐！"
-                elif today.month == 10 and today.day == 3:
-                    reply = "[欢迎姬]今天是卡米宝宝的生日哎！"
-                elif days_passed % 100 == 0 or days_passed == 50:
+                if days_passed % 10 == 0:
                     reply = f"[欢迎姬]哇！今天是卡米宝宝和云宝相遇的{days_passed}天哎！{days_passed}天快乐！"
                 elif today.month == 3 and today.day == 20:
                     years_passed = today.year - 2026
@@ -639,10 +707,12 @@ async def interact_word(event):
                         reply = "[欢迎姬]报告！发现云崎早_haya同学进入直播间！"
                 elif uid in WELCOME_MAP:
                     reply = WELCOME_MAP[uid].format(uname=uname)
-                elif medal_level > 30:
+                elif medal_level > 30 or guard_level in [1, 2]:
                     if len(uname) > 16:
                         uname = uname[:13] + "..."
                     reply = f"[欢迎姬]报告！一只叫{uname}的早崎鸭偷偷进入了直播间！" 
+
+                print(f"欢迎姬应该出现的reply: {reply}")
 
         MEMORY["audience"]["total_audience"] = MEMORY["audience"].get("total_audience", 0) + 1
         interact_cache.add(uid)
@@ -655,14 +725,20 @@ async def interact_word(event):
             add_log("[欢迎姬] 云崎早同学又一次进入直播间")
             
     if reply is not None:
-        if uid in GACHI_GACHI_ID or uid == GACHI_ID[3] or uid == ADMIN_ID:
-            await reply_queue.put((YQZ_ID, reply))
-        else:
-            await reply_queue.put((uid, reply))
-        add_log(f"[欢迎姬] 欢迎{uname}")
+        try:
+            if uid in GACHI_GACHI_ID or uid == GACHI_ID[3] or uid == ADMIN_ID:
+                await reply_queue.put((YQZ_ID, reply))
+            else:
+                await reply_queue.put((uid, reply))
+            add_log(f"[欢迎姬] 欢迎{uname}")
+        except Exception as e:
+            add_log(f"[ERROR][欢迎姬] {e}")
 
     if msg is not None:
-        await reply_queue.put((YQZ_ID, msg))
+        if uid == ADMIN_ID:
+            await reply_queue.put((YQZ_ID, msg))
+        else:
+            await reply_queue.put((uid, msg))
         add_log(f"[欢迎姬] {uname}的生日")
 
 
@@ -782,17 +858,23 @@ async def on_live(event):
             "type": "text",
             "data": {"text": f"标题：{title}\n房间号：27885573\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！"}
         })
-
         # for gid in TARGET_GROUP_LIST:
         #     await qq.send_mixed(segments, at_all=True, group_id=gid)
         #     await asyncio.sleep(3)
-        if hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_TIMES <= 6:
+        pass
+        
+        if hotglobal.PUSH_STATUS == 1 and ((hotglobal.PUSH_LIVE_TIMES <= 5 and hotglobal.PUSH_TIMES <= 8) or hotglobal.PUSH_TIMES == 9):
             tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
             await asyncio.gather(*tasks, return_exceptions=True)
             hotglobal.increment_push_times()
-            add_log(f"PUSH_STATUS: {hotglobal.PUSH_TIMES-1} -> {hotglobal.PUSH_TIMES}")
+            # add_log(f"PUSH_TIMES: {hotglobal.PUSH_TIMES-1} -> {hotglobal.PUSH_TIMES}")
+            # add_log(f"PUSH_LIVE_TIMES: {hotglobal.PUSH_LIVE_TIMES-1} -> {hotglobal.PUSH_LIVE_TIMES}")
         else:
-            return
+            tasks = [qq.send_mixed(segments, at_all=False, group_id=gid) for gid in TARGET_GROUP_LIST]
+            await asyncio.gather(*tasks, return_exceptions=True)
+            # hotglobal.increment_push_times()
+            add_log(f"PUSH_TIMES and PUSH_LIVE_TIMES remain without @all")
+        
         # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
         # await asyncio.sleep(5)
         # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
@@ -806,13 +888,20 @@ async def on_live(event):
         # for gid in TARGET_GROUP_LIST:
         #     await qq.send_mixed(segments, at_all=True, group_id=gid)
         #     await asyncio.sleep(3)
-        if hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_TIMES <= 6:
+        pass
+        
+        if hotglobal.PUSH_STATUS == 1 and ((hotglobal.PUSH_LIVE_TIMES <= 5 and hotglobal.PUSH_TIMES <= 8) or hotglobal.PUSH_TIMES == 9):
             tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
             await asyncio.gather(*tasks, return_exceptions=True)
             hotglobal.increment_push_times()
-            add_log(f"PUSH_TIMES: {hotglobal.PUSH_TIMES-1} -> {hotglobal.PUSH_TIMES}")
+            # add_log(f"PUSH_TIMES: {hotglobal.PUSH_TIMES-1} -> {hotglobal.PUSH_TIMES}")
+            # add_log(f"PUSH_LIVE_TIMES: {hotglobal.PUSH_LIVE_TIMES-1} -> {hotglobal.PUSH_LIVE_TIMES}")
         else:
-            return
+            tasks = [qq.send_mixed(segments, at_all=False, group_id=gid) for gid in TARGET_GROUP_LIST]
+            await asyncio.gather(*tasks, return_exceptions=True)
+            # hotglobal.increment_push_times()
+            add_log(f"PUSH_TIMES and PUSH_LIVE_TIMES remain without @all")
+        
         # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
         # await asyncio.sleep(5)
         # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
@@ -853,13 +942,20 @@ async def on_preparing(event):
         # for gid in TARGET_GROUP_LIST:
         #     await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=gid)
         #     await asyncio.sleep(3)
-        if hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_TIMES <= 6:
+        pass
+        
+        if hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_LIVE_TIMES <= 5 and hotglobal.PUSH_TIMES <= 8:
             tasks = [qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
             await asyncio.gather(*tasks, return_exceptions=True)
             hotglobal.increment_push_times()
-            add_log(f"PUSH_TIMES: {hotglobal.PUSH_TIMES-1} -> {hotglobal.PUSH_TIMES}")
+            # add_log(f"PUSH_TIMES: {hotglobal.PUSH_TIMES-1} -> {hotglobal.PUSH_TIMES}")
+            # add_log(f"PUSH_LIVE_TIMES: {hotglobal.PUSH_LIVE_TIMES-1} -> {hotglobal.PUSH_LIVE_TIMES}")
         else:
-            return
+            tasks = [qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=False, group_id=gid) for gid in TARGET_GROUP_LIST]
+            await asyncio.gather(*tasks, return_exceptions=True)
+            # hotglobal.increment_push_times()
+            add_log(f"PUSH_TIMES and PUSH_LIVE_TIMES remain without @all")
+        
         # await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP)
         # await asyncio.sleep(5)
         # await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP_FANS)
@@ -868,6 +964,21 @@ async def on_preparing(event):
     await asyncio.sleep(5)
     title = MEMORY["meta"]["title"] or "天  才  主  播  ！"
     await send_email(live_start_time, prepare_time, time_length, title)
+    MEMORY["meta"]["title"] = title
+    MEMORY["meta"]["live_time"] = 0
+    save_json("files/meta.json", MEMORY["meta"])
+
+# @room.on('INTERACT_WORD_V2')
+# async def interact_word(event):
+#     with open("debug/interact_word_v2.json", "a", encoding="utf-8") as f:
+#         json.dump(event, f, ensure_ascii=False, indent=2)
+    # print(f"INTERACT_WORD_V2: {event}")
+
+# @room.on('ENTRY_EFFECT_MUST_RECEIVE')
+# async def on_entry_effect_must_receive(event):
+#     with open("debug/entry_effect_must_receive.json", "a", encoding="utf-8") as f:
+#         json.dump(event, f, ensure_ascii=False, indent=2)
+    # print(f"ENTRY_EFFECT_MUST_RECEIVE: {event}")
 
 '''
 @room.on('SUPER_CHAT_MESSAGE_JPN')
@@ -894,9 +1005,7 @@ async def on_notice_msg(event):
 async def on_room_real_time_message_update(event):
     print(f"ROOM_REAL_TIME_MESSAGE_UPDATE: {event}")
 
-@room.on('ENTRY_EFFECT')
-async def on_entry_effect(event):
-    print(f"ENTRY_EFFECT: {event}")
+
 
 @room.on('ROOM_RANK')
 async def on_room_rank(event):
@@ -974,9 +1083,7 @@ async def on_popularity_red_pocket_winner_list(event):
 async def on_watched_change(event):
     print(f"WATCHED_CHANGE: {event}")
 
-@room.on('ENTRY_EFFECT_MUST_RECEIVE')
-async def on_entry_effect_must_receive(event):
-    print(f"ENTRY_EFFECT_MUST_RECEIVE: {event}")
+
 
 @room.on('FULL_SCREEN_SPECIAL_EFFECT')
 async def on_full_screen_special_effect(event):
@@ -1144,9 +1251,14 @@ scheduler = AsyncIOScheduler()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    hotglobal.load_push_times()
+    birthday_cache_manage.load_birthday_cache()
     scheduler.add_job(hotglobal.daily_reset_push_times, 'cron', hour=0, minute=0)
+    scheduler.add_job(birthday_cache_manage.daily_reset_birthday_cache, 'cron', hour=0, minute=0)
+    scheduler.add_job(livetime.save_cross_month, 'cron', day=1, hour=0, minute=0, args=[MEMORY["meta"]["live_time"]])
     scheduler.start()
     yield
+    birthday_cache_manage.save_birthday_cache()
     scheduler.shutdown()
 
 app = FastAPI(lifespan=lifespan)
@@ -1214,6 +1326,7 @@ def _update_meta_gear(profit):
     while profit >= next_t:
         gear += 1
         random_step = random.randint(4000, 5000)
+        # random_step = random.randint(30000, 40000)
         next_t += random_step
         triggered = True
         # add_log(f"[礼物姬] 下一电池阈值: {next_t}")
@@ -1234,12 +1347,15 @@ def _rollback_meta_gear(profit):
         if profit < min_threshold_for_gear:
             gear -= 1
             step = random.randint(4000, 5000)
+            # step = random.randint(30000, 40000)
             next_t -= step
 
             if gear == 0:
                 min_next = random.randint(4000, 5000)
+                # min_next = random.randint(30000, 40000)
             else:
                 min_next = gear * 4000
+                # min_next = gear * 30000
             if next_t < min_next:
                 next_t = min_next
             triggered = True
@@ -1399,7 +1515,7 @@ def api_delete_specific_gift(data: DeleteSpecificGiftInput):
             profit = actual_price
             cost = data.blind_cost if data.blind_cost is not None else 0.0
             box_name = data.original_box_name or data.gift_name
-            box_name = BOX_MEMORY_MAP.get(box_name, box_name)
+            # box_name = BOX_MEMORY_MAP.get(box_name, box_name)
 
             if uid_str in MEMORY["box"]:
                 box_user = MEMORY["box"][uid_str]
@@ -1527,10 +1643,11 @@ def _do_emergency_save(source="unknown"):
             save_json("files/meta.json", MEMORY["meta"])
         if MEMORY.get("audience"):
             MEMORY["audience"]["interact_cache"] = list(interact_cache)
-            MEMORY["audience"]["birthday_cache"] = list(birthday_cache)
+            # MEMORY["audience"]["birthday_cache"] = list(birthday_cache)
             save_json("files/audience.json", MEMORY["audience"])
         if MEMORY.get("danmu"):
             append_to_jsonl("files/danmu.jsonl", MEMORY["danmu"])
+        birthday_cache_manage.save_birthday_cache()
         add_log("[EMERGENCY SAVE] Completed successfully.")
     except Exception as e:
         add_log(f"[EMERGENCY SAVE FAILED] {e}")
@@ -1545,7 +1662,6 @@ async def main():
     add_log("=== Start ===")
     await init_get_room_status()
     load_json_files()
-    hotglobal.load_push_times()
 
     for filename, config in HOT_RELOAD_CONFIG.items():
         filepath = os.path.join(os.path.dirname(__file__), filename)

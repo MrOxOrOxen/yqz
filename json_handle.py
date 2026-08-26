@@ -28,6 +28,7 @@ def load_json_files():
                 MEMORY["meta"]["total_danmu_cnt_from_start"] = data.get("total_danmu_cnt_from_start", 0)
                 MEMORY["meta"]["is_loss_warning_sent"] = data.get("is_loss_warning_sent", False)
                 MEMORY["meta"]["is_whole_profit_msg_sent"] = data.get("is_whole_profit_msg_sent", False)
+                # MEMORY["meta"]["next_threshold"] = data.get("next_threshold", random.randint(30000, 40000))
                 MEMORY["meta"]["next_threshold"] = data.get("next_threshold", random.randint(4000, 5000))
                 MEMORY["meta"]["current_gear"] = data.get("current_gear", 0)
                 MEMORY["meta"]["dog"] = data.get("dog", 0)
@@ -44,6 +45,7 @@ def load_json_files():
         MEMORY["meta"]["live_time"] = 0
         MEMORY["meta"]["total_battery"] = 0
         add_log("No meta.json. Total battery starts with 0")
+        # MEMORY["meta"]["next_threshold"] = random.randint(30000, 40000)
         MEMORY["meta"]["next_threshold"] = random.randint(4000, 5000)
         add_log(f"Next battery threshold: {MEMORY['meta']['next_threshold']}")
 
@@ -53,26 +55,41 @@ def load_json_files():
                 data = json.load(f)
                 MEMORY["audience"] = {
                     "total_audience": data.get("total_audience", 0),
-                    "interact_cache": data.get("interact_cache", []),
-                    "birthday_cache": data.get("birthday_cache", [])
+                    "interact_cache": data.get("interact_cache", [])
+                    # "birthday_cache": data.get("birthday_cache", [])
                 }
                 interact_cache.clear()
                 interact_cache.update(data.get("interact_cache", []))
                 add_log(f"Loaded interact_cache with {len(interact_cache)} entries.")
-                birthday_cache.clear()
-                birthday_cache.update(data.get("birthday_cache", []))
-                add_log(f"Loaded birthday_cache with {len(birthday_cache)} entries.")
+                # birthday_cache.clear()
+                # birthday_cache.update(data.get("birthday_cache", []))
+                # add_log(f"Loaded birthday_cache with {len(birthday_cache)} entries.")
                 
         except Exception as e:
             add_log(f"[ERROR] Error when reading audience.json: {e}")
 
     else:
-        MEMORY["audience"] = {"total_audience": 0, "interact_cache": [], "birthday_cache": []}
+        MEMORY["audience"] = {"total_audience": 0, "interact_cache": []}
         interact_cache.clear()
-        birthday_cache.clear()
+        # birthday_cache.clear()
         save_json("files/audience.json", MEMORY["audience"])
         add_log("No audience.json. Total audience starts with 0")
 
+    birthday_cache_path = "birthday_cache.json"
+    if os.path.exists(birthday_cache_path):
+        try:
+            with open(birthday_cache_path, "r", encoding="utf-8") as f:
+                b_data = json.load(f)
+                birthday_cache.clear()
+                birthday_cache.update(b_data)
+                add_log(f"Loaded birthday_cache with {len(birthday_cache)} entries.")
+        except Exception as e:
+            add_log(f"Error loading birthday_cache.json: {e}")
+            birthday_cache.clear()
+    else:
+        birthday_cache.clear()
+        save_json(birthday_cache_path, list(birthday_cache))
+        add_log("No birthday_cache.json. Initialized empty birthday cache.")
 
     for file_path, (key, target) in json_map.items():
         try:

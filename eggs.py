@@ -357,5 +357,24 @@ async def guard_egg(uid, uname, guard_name, price, cnt):
             pass
         add_log(f"[礼物姬]感谢{uname}的{guard_name}")
 
+    async def annual_thank_guard(uid, uname, guard_name):
+        if guard_name == "舰长":
+            reply = "[礼物姬]感谢上舰！让我们今后依旧风雨同行，携手共度！"
+            await reply_queue.put((uid, reply))
+        elif guard_name == "提督":
+            reply1 = "[礼物姬]感谢早崎鸭大人的提督！你的支持与信任是我最宝贵的礼物！"
+            reply2 = "[礼物姬]以后我们也要一起走下去呀！"
+            await reply_queue.put((uid, reply1))
+            await reply_queue.put((uid, reply2))
+        elif guard_name == "总督":
+            reply1 = "[礼物姬]感谢早崎鸭大人的总督！！我的天呢竟然还有总督！"
+            reply2 = "[礼物姬]我没准备这段词啊啊啊啊！"
+            reply3 = "[礼物姬]能遇到你是我最幸运的事，以后让我跟随你吧大人！！"
+            await reply_queue.put((uid, reply1))
+            await reply_queue.put((uid, reply2))
+            await reply_queue.put((uid, reply3))
+        add_log(f"[礼物姬] 感谢{uname}的{guard_name}")
+
     # await birthday_thank_guard(uid, uname, guard_name)
+    # await annual_thank_guard(uid, uname, guard_name)
     pass

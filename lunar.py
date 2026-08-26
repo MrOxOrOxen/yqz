@@ -12,7 +12,7 @@ def is_birthday_today(birthday_str, is_moon, only_leap):
     
     target_mmdd = birthday_str.lstrip("-")
     is_leap_birthday = birthday_str.startswith("-")
-    is_today_leap = now_lunar.getIsLeap()
+    is_today_leap = now_lunar.isLeap()
 
     if not is_leap_birthday:
         return (not is_today_leap) and (today_mmdd == target_mmdd)

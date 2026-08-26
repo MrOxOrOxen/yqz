@@ -21,12 +21,31 @@ async def call_box(uid, uname, msg):
         await asyncio.sleep(3)
 
     box_name = extract_type(msg)
-    reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
+    # reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
+    reply_box_name = box_name
 
-    data_type = "box" if box_name is None else "gift"
+    data_type = "box" if box_name == "盲盒" else "gift"
 
-    cnt, cost, profit = await load_daily_data(uid, data_type, box_name=box_name, check_user_type="single")
-    net = profit - cost
+    if data_type == "box":
+        cnt, cost, profit = await load_daily_data(uid, data_type, box_name=box_name, check_user_type="single")
+        net = profit - cost
+    elif data_type == "gift":
+        base_box_name = re.sub(r'(盲盒)+$', '', reply_box_name.strip())
+        cnt, cost, profit = await load_daily_data(uid, data_type, box_name=base_box_name, check_user_type="single")
+        net = profit - cost
+        if cnt == 0:
+            retry_box_name = f"{base_box_name}盲盒"
+            retry_cnt, retry_cost, retry_profit = await load_daily_data(uid, data_type, box_name=retry_box_name, check_user_type="single")
+            if retry_cnt > 0:
+                box_name = retry_box_name
+                cnt, cost, profit = retry_cnt, retry_cost, retry_profit
+                net = profit - cost
+                reply_box_name = f"{base_box_name}盲盒"
+            else:
+                if reply_box_name.strip().endswith("盲盒"):
+                    reply_box_name = reply_box_name.strip()
+                else:
+                    reply_box_name = f"{reply_box_name}盲盒"
 
     if cnt > 0:
         if uid == ADMIN_ID:
@@ -75,12 +94,31 @@ async def call_all_box(uid, uname, msg):
         await asyncio.sleep(3)
     
     box_name = extract_type(msg)
-    reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
+    # reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
+    reply_box_name = box_name
 
-    data_type = "box" if box_name is None else "gift"
+    data_type = "box" if box_name == "盲盒" else "gift"
 
-    cnt, cost, profit = await load_daily_data(uid, data_type, box_name=box_name, check_user_type="all")
-    net = profit - cost
+    if data_type == "box":
+        cnt, cost, profit = await load_daily_data(uid, data_type, box_name=box_name, check_user_type="all")
+        net = profit - cost
+    elif data_type == "gift":
+        base_box_name = re.sub(r'(盲盒)+$', '', reply_box_name.strip())
+        cnt, cost, profit = await load_daily_data(uid, data_type, box_name=base_box_name, check_user_type="all")
+        net = profit - cost
+        if cnt == 0:
+            retry_box_name = f"{base_box_name}盲盒"
+            retry_cnt, retry_cost, retry_profit = await load_daily_data(uid, data_type, box_name=retry_box_name, check_user_type="all")
+            if retry_cnt > 0:
+                box_name = retry_box_name
+                cnt, cost, profit = retry_cnt, retry_cost, retry_profit
+                net = profit - cost
+                reply_box_name = f"{base_box_name}盲盒"
+            else:
+                if reply_box_name.strip().endswith("盲盒"):
+                    reply_box_name = reply_box_name.strip()
+                else:
+                    reply_box_name = f"{reply_box_name}盲盒"
 
     if cnt > 0:
         reply = f"[盲盒姬]今天全场已抽取{cnt}个{reply_box_name}，净收益{net:.0f}电池"
@@ -144,12 +182,31 @@ async def call_at_box(uid, uname, msg):
             print(f"ERROR when loading to_check_uname: {e}")
 
     box_name = extract_type(clean_msg)
-    reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
+    # reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
+    reply_box_name = box_name
 
-    data_type = "box" if box_name is None else "gift"
+    data_type = "box" if box_name == "盲盒" else "gift"
 
-    cnt, cost, profit = await load_daily_data(to_check_uid, data_type, box_name=box_name, check_user_type="single")
-    net = profit - cost
+    if data_type == "box":
+        cnt, cost, profit = await load_daily_data(to_check_uid, data_type, box_name=box_name, check_user_type="single")
+        net = profit - cost
+    elif data_type == "gift":
+        base_box_name = re.sub(r'(盲盒)+$', '', reply_box_name.strip())
+        cnt, cost, profit = await load_daily_data(to_check_uid, data_type, box_name=base_box_name, check_user_type="single")
+        net = profit - cost
+        if cnt == 0:
+            retry_box_name = f"{base_box_name}盲盒"
+            retry_cnt, retry_cost, retry_profit = await load_daily_data(to_check_uid, data_type, box_name=retry_box_name, check_user_type="single")
+            if retry_cnt > 0:
+                box_name = retry_box_name
+                cnt, cost, profit = retry_cnt, retry_cost, retry_profit
+                net = profit - cost
+                reply_box_name = f"{base_box_name}盲盒"
+            else:
+                if reply_box_name.strip().endswith("盲盒"):
+                    reply_box_name = reply_box_name.strip()
+                else:
+                    reply_box_name = f"{reply_box_name}盲盒"
 
     if cnt > 0:
         if uid == ADMIN_ID:
@@ -203,13 +260,34 @@ async def call_month_box(uid, uname, msg):
     if month is None:
         return
 
-    reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
+    # reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
+    reply_box_name = box_name
 
     year = datetime.now().year
-    data_type = "box" if box_name is None else "gift"
+    data_type = "box" if box_name == "盲盒" else "gift"
 
-    month_cnt, month_cost, month_profit = await load_month_data(uid, month, year, data_type, box_name=box_name, check_user_type="single")
-    month_net = month_profit - month_cost
+    if data_type == "box":
+        month_cnt, month_cost, month_profit = await load_month_data(uid, month, year, data_type, box_name=box_name, check_user_type="single")
+        month_net = month_profit - month_cost
+        
+    elif data_type == "gift":
+        base_box_name = re.sub(r'(盲盒)+$', '', reply_box_name.strip())
+        month_cnt, month_cost, month_profit = await load_month_data(uid, month, year, data_type, box_name=base_box_name, check_user_type="single")
+        month_net = month_profit - month_cost
+        if month_cnt == 0:
+            retry_box_name = f"{base_box_name}盲盒"
+            retry_cnt, retry_cost, retry_profit = await load_month_data(uid, month, year, data_type, box_name=retry_box_name, check_user_type="single")
+            if retry_cnt > 0:
+                box_name = retry_box_name
+                month_cnt, month_cost, month_profit = retry_cnt, retry_cost, retry_profit
+                month_net = month_profit - month_cost
+                reply_box_name = f"{base_box_name}盲盒"
+            else:
+                if reply_box_name.strip().endswith("盲盒"):
+                    reply_box_name = reply_box_name.strip()
+                else:
+                    reply_box_name = f"{reply_box_name}盲盒"
+    
     if month_cnt > 0:
         if uid == ADMIN_ID:
             reply = f"[盲盒姬]卡米宝宝{month}月已抽取{month_cnt}个{reply_box_name}，净收益{month_net:.0f}电池"
@@ -261,13 +339,32 @@ async def call_month_all_box(uid, uname, msg):
     if month is None:
         return
 
-    reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
+    # reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
+    reply_box_name = box_name
 
     year = datetime.now().year
-    data_type = "box" if box_name is None else "gift"
+    data_type = "box" if box_name == "盲盒" else "gift"
 
-    month_cnt, month_cost, month_profit = await load_month_data(uid, month, year, data_type, box_name=box_name, check_user_type="all")
-    month_net = month_profit - month_cost
+    if data_type == "box":
+        month_cnt, month_cost, month_profit = await load_month_data(uid, month, year, data_type, box_name=box_name, check_user_type="all")
+        month_net = month_profit - month_cost
+    elif data_type == "gift":
+        base_box_name = re.sub(r'(盲盒)+$', '', reply_box_name.strip())
+        month_cnt, month_cost, month_profit = await load_month_data(uid, month, year, data_type, box_name=base_box_name, check_user_type="all")
+        month_net = month_profit - month_cost
+        if month_cnt == 0:
+            retry_box_name = f"{base_box_name}盲盒"
+            retry_cnt, retry_cost, retry_profit = await load_month_data(uid, month, year, data_type, box_name=retry_box_name, check_user_type="all")
+            if retry_cnt > 0:
+                box_name = retry_box_name
+                month_cnt, month_cost, month_profit = retry_cnt, retry_cost, retry_profit
+                month_net = month_profit - month_cost
+                reply_box_name = f"{base_box_name}盲盒"
+            else:
+                if reply_box_name.strip().endswith("盲盒"):
+                    reply_box_name = reply_box_name.strip()
+                else:
+                    reply_box_name = f"{reply_box_name}盲盒"
     if month_cnt > 0:
         reply = f"[盲盒姬]{month}月全场已抽取{month_cnt}个{reply_box_name}，净收益{month_net:.0f}电池"
 
@@ -335,13 +432,31 @@ async def call_month_at_box(uid, uname, msg):
     if month is None:
         return
 
-    reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
+    # reply_box_name = BOX_MEMORY_MAP.get(box_name, "盲盒")
+    reply_box_name = box_name
 
     year = datetime.now().year
-    data_type = "box" if box_name is None else "gift"
-
-    month_cnt, month_cost, month_profit = await load_month_data(to_check_uid, month, year, data_type, box_name=box_name, check_user_type="single")
-    month_net = month_profit - month_cost
+    data_type = "box" if box_name == "盲盒" else "gift"
+    if data_type == "box":
+        month_cnt, month_cost, month_profit = await load_month_data(to_check_uid, month, year, data_type, box_name=box_name, check_user_type="single")
+        month_net = month_profit - month_cost
+    elif data_type == "gift":
+        base_box_name = re.sub(r'(盲盒)+$', '', reply_box_name.strip())
+        month_cnt, month_cost, month_profit = await load_month_data(to_check_uid, month, year, data_type, box_name=base_box_name, check_user_type="single")
+        month_net = month_profit - month_cost
+        if month_cnt == 0:
+            retry_box_name = f"{base_box_name}盲盒"
+            retry_cnt, retry_cost, retry_profit = await load_month_data(to_check_uid, month, year, data_type, box_name=retry_box_name, check_user_type="single")
+            if retry_cnt > 0:
+                box_name = retry_box_name
+                month_cnt, month_cost, month_profit = retry_cnt, retry_cost, retry_profit
+                month_net = month_profit - month_cost
+                reply_box_name = f"{base_box_name}盲盒"
+            else:
+                if reply_box_name.strip().endswith("盲盒"):
+                    reply_box_name = reply_box_name.strip()
+                else:
+                    reply_box_name = f"{reply_box_name}盲盒"
     if month_cnt > 0:
         if uid == ADMIN_ID:
             reply = f"[盲盒姬]卡米宝宝{month}月已抽取{month_cnt}个{reply_box_name}，净收益{month_net:.0f}电池"
@@ -437,7 +552,7 @@ def boxn_calculate(uid_str, daily_data, box_name, check_user_type):
 
     return daily_cnt, daily_cost, daily_profit
 
-async def load_month_data(uid, month, year, data_type, box_name=None, check_user_type="single"):
+async def load_month_data(uid, month, year, data_type, box_name="盲盒", check_user_type="single"):
     # data_type(str): "box", "gift"
     month_cnt = 0
     month_cost = 0
@@ -474,8 +589,9 @@ async def load_month_data(uid, month, year, data_type, box_name=None, check_user
             daily_cnt, daily_cost, daily_profit = box_calculate(uid_str, daily_data, check_user_type=check_user_type)
             
         # elif data_type == "gift" and box_name in GIFT_BOX_MAP:
-        elif data_type == "gift" and box_name is not None:
-            full_box_name = BOX_MEMORY_MAP.get(box_name, box_name)
+        elif data_type == "gift" and box_name != "盲盒":
+            # full_box_name = BOX_MEMORY_MAP.get(box_name, box_name)
+            full_box_name = box_name
             daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, box_name=full_box_name, check_user_type=check_user_type)
             
         month_cnt += daily_cnt
@@ -495,24 +611,29 @@ async def load_month_data(uid, month, year, data_type, box_name=None, check_user
     # except Exception as e:
     #     print(f"No box.json: {e}, command passed")
 
-        elif data_type == "gift" and box_name in BOX_MEMORY_MAP:
+        # elif data_type == "gift" and box_name in BOX_MEMORY_MAP:
+        elif data_type == "gift":
             # try:
                 # with open("files/gift.json", "r", encoding="utf-8") as f:
                 #     daily_data = json.load(f)
-            full_box_name = BOX_MEMORY_MAP.get(box_name, box_name)
+            # full_box_name = BOX_MEMORY_MAP.get(box_name, box_name)
+            full_box_name = box_name
             daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, box_name=full_box_name, check_user_type=check_user_type)
-            month_cnt += daily_cnt
-            month_cost += daily_cost
-            month_profit += daily_profit
             # except Exception as e:
             #     print(f"No gift.json: {e}, command passed")
+        else:
+            daily_cnt, daily_cost, daily_profit = 0, 0, 0
+        
+        month_cnt += daily_cnt
+        month_cost += daily_cost
+        month_profit += daily_profit
 
     except Exception as e:
         print(f"No box.json: {e}, command passed")
 
     return month_cnt, month_cost, month_profit
 
-async def load_daily_data(uid, data_type, box_name=None, check_user_type="single"):
+async def load_daily_data(uid, data_type, box_name="盲盒", check_user_type="single"):
     daily_cnt = 0
     daily_cost = 0
     daily_profit = 0
@@ -525,10 +646,12 @@ async def load_daily_data(uid, data_type, box_name=None, check_user_type="single
             daily_cnt, daily_cost, daily_profit = box_calculate(uid_str, daily_data, check_user_type=check_user_type)
             return daily_cnt, daily_cost, daily_profit
 
-        elif data_type == "gift" and box_name in BOX_MEMORY_MAP:
+        # elif data_type == "gift" and box_name in BOX_MEMORY_MAP:
+        elif data_type == "gift":
             # with open("files/gift.json", "r", encoding="utf-8") as f:
             #     daily_data = json.load(f)
-            full_box_name = BOX_MEMORY_MAP.get(box_name, box_name)
+            # full_box_name = BOX_MEMORY_MAP.get(box_name, box_name)
+            full_box_name = box_name
             daily_cnt, daily_cost, daily_profit = boxn_calculate(uid_str, daily_data, box_name=full_box_name, check_user_type=check_user_type)
             return daily_cnt, daily_cost, daily_profit
         
@@ -536,31 +659,32 @@ async def load_daily_data(uid, data_type, box_name=None, check_user_type="single
 
     except Exception as e:
         print(f"No box.json: {e}, command passed")
+        return 0, 0, 0
 
 def extract_month_and_type(msg):
-    box_names_pattern = '|'.join(re.escape(name) for name in BOX_NAME_LIST)
-    match = re.search(rf'呼叫(\d{{1,2}})月({box_names_pattern})?盲盒姬', msg)
+    # box_names_pattern = '|'.join(re.escape(name) for name in BOX_NAME_LIST)
+    match = re.search(rf'呼叫(\d{{1,2}})月(.*?)盲盒姬', msg)
     # match = re.search(r'呼叫(\d{1,2})月(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬', msg)
     if match:
         month = int(match.group(1))
-        box_name = match.group(2) or None
+        box_name = match.group(2) or "盲盒"
         if 1 <= month <= 12:
             return month, box_name
     
     # match = re.search(r'呼叫(一|二|三|四|五|六|七|八|九|十|十一|十二)月(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬', msg)
-    match = re.search(rf'呼叫(一|二|三|四|五|六|七|八|九|十|十一|十二)月({box_names_pattern})?盲盒姬', msg)
+    match = re.search(rf'呼叫(一|二|三|四|五|六|七|八|九|十|十一|十二)月(.*?)盲盒姬', msg)
     if match:
-        box_name = match.group(2) or None
+        box_name = match.group(2) or "盲盒"
         return CN_MONTHS[match.group(1)], box_name
     
-    return None, None
+    return None, "盲盒"
 
 def extract_type(msg):
-    box_names_pattern = '|'.join(re.escape(name) for name in BOX_NAME_LIST)
-    pattern = rf'呼叫({box_names_pattern})?盲盒姬'
+    # box_names_pattern = '|'.join(re.escape(name) for name in BOX_NAME_LIST)
+    pattern = rf'呼叫(.*?)盲盒姬'
     # match = re.search(r'呼叫(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬', msg)
     match = re.search(pattern, msg)
     if match:
-        box_name = match.group(1) or None
+        box_name = match.group(1) or "盲盒"
         return box_name
-    return None
+    return "盲盒"

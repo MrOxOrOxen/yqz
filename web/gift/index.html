@@ -6,12 +6,13 @@
     <title>云宝的电池计数器</title>
     <style>
         :root {
-            --primary-color: #2e7d32;
+            --primary-color: #f35e99;
             --bg-color: #000000;
             --card-bg: rgba(20, 20, 20, 0.8);
             --text-main: #ffffff;
             --text-dim: #8c8c8c;
-            --accent-color: #81c784;
+            --accent-color: #f79fbc;
+            --dark-color: #a38888;
         }
 
         body {
@@ -140,7 +141,6 @@
             <p>All rights reserved.</p>
             <p>Battery data will be refreshed at UTC 23:59 every day.</p>
             <p style="text-align:center; color:#8c8c8c; font-size:11px; margin:0;">
-            <p>
                 <a href="https://beian.miit.gov.cn" style="color:#8c8c8c; font-size:11px; text-decoration:none;">辽ICP备2026015417号-1</a>
             </p>
             <p style="text-align:center; color:#8c8c8c; font-size:11px; margin:0;">
@@ -184,7 +184,7 @@
                         statusElement.style.color = "#8c8c8c";
                         break;
                     case 3:
-                        statusElement.innerText = `最后更新: ${new Date().toLocaleTimeString()}（自动同步中）\n考试加油鸭！`;
+                        statusElement.innerText = `最后更新: ${new Date().toLocaleTimeString()}（自动同步中）\n最最最可爱的云宝！三！周！年！快！乐！`;
                         statusElement.style.color = "#8c8c8c";
                         break;
                     default:
@@ -205,7 +205,7 @@
 
                     const isLow = (user.profit || 0) < 10;
                     const dimNameColor = isLow ? '#8c8c8c': '';
-                    const dimColor = isLow ? '#196f3d' : '';
+                    const dimColor = isLow ? 'var(--dark-color)' : '';
 
                     return `
                         <div class="row">

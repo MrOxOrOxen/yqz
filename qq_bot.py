@@ -271,7 +271,8 @@ async def dynamic_monitor(qq_bot):
             new_items = [item for item in items if item.get('id_str', '') in new_ids]
             new_items.reverse()
 
-            for item in new_items:
+            total_new = len(new_items)
+            for index, item in enumerate(new_items):
                 info = extract_info(item)
                 dyn_id = info['id']
                 dyn_type = info['type']
@@ -338,10 +339,17 @@ async def dynamic_monitor(qq_bot):
                     segments.append({"type": "text", "data": {"text": f"动态地址：{link}"}})
 
                     # current_time = datetime.now()
-                    if qq_bot and hotglobal.PUSH_STATUS == 1:
+                    if qq_bot and hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_TIMES <= 9:
                         # if current_time > baseline_end:
                         tasks = [qq_bot.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
                         await asyncio.gather(*tasks, return_exceptions=True)
+                        hotglobal.increment_dynamic_push_times()
+                        # add_log(f"PUSH_TIMES: {hotglobal.PUSH_TIMES-1} -> {hotglobal.PUSH_TIMES}")
+                        # add_log(f"PUSH_LIVE_TIMES: {hotglobal.PUSH_LIVE_TIMES-1} -> {hotglobal.PUSH_LIVE_TIMES}")
+                    else:
+                        tasks = [qq_bot.send_mixed(segments, at_all=False, group_id=gid) for gid in TARGET_GROUP_LIST]
+                        await asyncio.gather(*tasks, return_exceptions=True)
+                        add_log(f"PUSH_TIMES and PUSH_LIVE_TIMES remain without @all")
                         # else:
                         #     pass
                         # await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
@@ -448,12 +456,20 @@ async def dynamic_monitor(qq_bot):
                     '''
                     segments.append({"type": "text", "data": {"text": f"{header}\n云崎早_haya 发布了新动态！\n\n（该动态类型暂不支持解析：{dyn_type}）\n\n===\n动态地址：{link}"}})
                     '''
+                    add_log("[推送姬] LIVE跳过推送")
                 
                 # current_time = datetime.now()
-                if qq_bot and segments != [] and hotglobal.PUSH_STATUS == 1:
+                if qq_bot and segments != [] and hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_TIMES <= 9:
                     # if current_time > baseline_end:
                     tasks = [qq_bot.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
                     await asyncio.gather(*tasks, return_exceptions=True)
+                    hotglobal.increment_dynamic_push_times()
+                    # add_log(f"PUSH_TIMES: {hotglobal.PUSH_TIMES-1} -> {hotglobal.PUSH_TIMES}")
+                    # add_log(f"PUSH_LIVE_TIMES: {hotglobal.PUSH_LIVE_TIMES-1} -> {hotglobal.PUSH_LIVE_TIMES}")
+                else:
+                    tasks = [qq_bot.send_mixed(segments, at_all=False, group_id=gid) for gid in TARGET_GROUP_LIST]
+                    await asyncio.gather(*tasks, return_exceptions=True)
+                    add_log(f"PUSH_TIMES and PUSH_LIVE_TIMES remain without @all")
                     # else:
                     #     pass
                     # await qq_bot.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
@@ -462,7 +478,11 @@ async def dynamic_monitor(qq_bot):
                     
                 add_log(f"[推送姬] {TYPE_MAP.get(dyn_type, '未知')}提醒 ID:{dyn_id}")
                 
-
+                if index < total_new - 1:
+                    delay_seconds = 3
+                    add_log(f"[推送姬] 存在多条动态，等待 {delay_seconds} 秒后再发送下一条...")
+                    await asyncio.sleep(delay_seconds)
+                    
             seen_ids = set(current_ids) | seen_ids
             if len(seen_ids) > 20:
                 seen_ids = set(sorted(seen_ids, key=lambda x: (len(x), x))[-20:])
