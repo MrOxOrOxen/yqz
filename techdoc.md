@@ -41,7 +41,7 @@
 |   - runtime_state.json
 | - bili_gift_map.json
 | - bili_gift_map.py
-| - birthday_cache.json
+| - birthday_cache_manage.json
 | - box_bot.py
 | - constants.py
 | - data.py
@@ -49,9 +49,11 @@
 | - error_log.txt
 | - get_data.py
 | - gift_bot.py
+| - hotglobal.py
 | - hotreload_config.py
 | - ids.py
 | - json_handle.py
+| - livetime.py
 | - logger.py
 | - lunar.py
 | - mail.py
@@ -460,7 +462,7 @@ main_v2.py为主程序，负责集成上述功能。
 
 next_threshold与current_gear为“你看又⭕️”这个彩蛋的下一阶段触发阈值与目前档位。类似于这两个key的、用于彩蛋的其他数字类型变量也存在meta.json中。
 
-is_birthday_msg_sent为云崎早生日彩蛋的控制变量。类似于is_birthday_msg_sent的、用于彩蛋的其他布尔类型变量也存在meta.json中。
+is_birthday_msg_sent为云崎早的生日彩蛋的控制变量。类似于is_birthday_msg_sent的、用于彩蛋的其他布尔类型变量也存在meta.json中。
 
 - danmu.jsonl:
 
@@ -761,9 +763,9 @@ birthday_raw支持的数据录入类型：
 
 ### 2.6.3 用户过生日时
 
-同样使用interact_word_v2接口，当观众进入直播间时，通过BIRTHDAY_MAP判断用户是否符合发送条件。若符合条件，则发送对应的生日祝福文本。
+同样使用interact_word_v2以及entry_effect接口，当观众进入直播间时，通过BIRTHDAY_MAP判断用户是否符合发送条件。若符合条件，则发送对应的生日祝福文本。
 
-事件触发后，将用户uid存入birthday_cache.json中。后续用户再次进房时会在birthday_cache.json里对uid进行校验，如果已经进入过直播间，则不会执行生日祝福程序。
+事件触发后，将用户uid存入stable_json/birthday_cache.json中。后续用户再次进房时会在birthday_cache.json里对uid进行校验，如果已经进入过直播间，则不会执行生日祝福程序。
 
 birthday_cache会在每天0:00自动清空。由于其为独立的json文件，其内容不会受到每天8:59程序重启的影响。
 
