@@ -41,7 +41,7 @@
 |   - runtime_state.json
 | - bili_gift_map.json
 | - bili_gift_map.py
-| - birthday_cache_manage.json
+| - birthday_cache_manage.py
 | - box_bot.py
 | - constants.py
 | - data.py
