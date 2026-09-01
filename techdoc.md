@@ -1058,6 +1058,7 @@ if hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_TIMES <= 8:
 
 1. 全局变量STATUS: 这是卡米自己给自己设定的一个特殊变量，可以通过FastAPI传到电池计数器上，作为卡米是否睡觉的提示，或者作为彩蛋使用。
 2. 电池计数器以及SuperChat记录姬的html文件、yqzhaya.com的html、css以及js文件。
+3. 程序定时自动处理以及检测服务器性能指标的所有脚本文件。
 
 ## 5.2 在github上隐藏的文件的大致结构：
 
@@ -1151,6 +1152,41 @@ WELCOME_MAP = {
 
 REFUSE_WELCOME_LIST = [xxx, xxx]
 
+def create_birthday_dict(
+    mmdd,
+    msg="[欢迎姬]今天是{uname}老师的生日，让我们祝ta生日快乐！",
+    is_moon=0,
+    night_agree=1,
+    only_leap=1
+):
+    if msg is None:
+        msg = "[欢迎姬]今天是{uname}老师的生日，让我们祝ta生日快乐！"
+    return [mmdd, msg, is_moon, night_agree, only_leap]
+
+birthday_raw = {
+    xxx: "xxx",
+    xxx: {"xxx": xxx, "xxx": xxx}
+}
+
+BIRTHDAY_MAP = {}
+
+for uid, raw_value in birthday_raw.items():
+    if not isinstance(raw_value, list):
+        items = [raw_value]
+    else:
+        items = raw_value
+
+    parsed_list = []
+    for item in items:
+        if isinstance(item, tuple):
+            parsed_list.append(create_birthday_dict(*item))
+        elif isinstance(item, dict):
+            parsed_list.append(create_birthday_dict(**item))
+        else:
+            parsed_list.append(create_birthday_dict(item))
+            
+    BIRTHDAY_MAP[uid] = parsed_list
+
 COMBO_GUARD_PRICE = {
     "舰长": 1680,
     "提督": 15980,
@@ -1179,13 +1215,6 @@ CN_MONTHS = {
     "十一": 11,
     "十二": 12
 }
-
-BOX_MEMORY_MAP = {
-    "xxx": "xxx盲盒",
-    "xxx": "xxx盲盒"
-}
-
-BOX_NAME_LIST = ["xxx", "xxx"]
 ```
 
 # 6 更新日志
