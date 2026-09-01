@@ -1,0 +1,504 @@
+{
+  "COMMON_NOTICE_DANMAKU": {
+    "room_display_id": 27885573,
+    "room_real_id": 27885573,
+    "type": "COMMON_NOTICE_DANMAKU",
+    "data": {
+      "cmd": "COMMON_NOTICE_DANMAKU",
+      "data": {
+        "terminals": [
+          1,
+          4
+        ],
+        "content_segments": [
+          {
+            "type": 1,
+            "img_url": "",
+            "img_width": 0,
+            "img_height": 0,
+            "background_color": null,
+            "background_color_dark": null,
+            "font_bold": false,
+            "font_color": "#F294AE",
+            "font_color_dark": "",
+            "text": "超能粉丝节：每日首次赠礼享额外100%亲密度！",
+            "highlight_font_color": "",
+            "highlight_font_color_dark": ""
+          },
+          {
+            "type": 3,
+            "img_url": "",
+            "img_width": 0,
+            "img_height": 0,
+            "background_color": [
+              "#FA729A"
+            ],
+            "background_color_dark": null,
+            "font_bold": false,
+            "uri": "https://live.bilibili.com/activity/live-activity-battle/index.html?app_name=fans_autumn_2026&with_menu=0&is_live_half_webview=1&hybrid_rotate_d=1&hybrid_half_ui=1,3,100p,70p,0,0,0,0,12,0;2,2,375,100p,0,0,0,0,12,0;3,3,100p,70p,0,0,0,0,12,0;4,2,375,100p,0,0,0,0,12,0;5,3,100p,70p,0,0,0,0,12,0;6,3,100p,70p,0,0,0,0,12,0;7,3,100p,70p,0,0,0,0,12,0;8,3,100p,70p,0,0,0,0,12,0&pc_ui=375,626,17181a,2&play_tab=2&room_id=27885573&uid=3493074573461871#/play?fans_autumn_2026_user_play_tab=3",
+            "font_color": "#FFFFFF",
+            "font_color_dark": "",
+            "text": "【查看活动】",
+            "highlight_font_color": "",
+            "highlight_font_color_dark": ""
+          }
+        ],
+        "danmaku_style": {
+          "background_color": null,
+          "background_color_dark": null
+        }
+      }
+    }
+  }
+}{
+  "ENTRY_EFFECT_MUST_RECEIVE": {
+    "room_display_id": 27885573,
+    "room_real_id": 27885573,
+    "type": "ENTRY_EFFECT_MUST_RECEIVE",
+    "data": {
+      "cmd": "ENTRY_EFFECT_MUST_RECEIVE",
+      "data": {
+        "id": 4,
+        "uid": 1224551233,
+        "target_id": 3493074573461871,
+        "mock_effect": 0,
+        "face": "https://i1.hdslb.com/bfs/face/6d4033dd4994076c23d33800f5e6e311becf1646.jpg",
+        "privilege_type": 3,
+        "copy_writing": "<%晚安卡米宝宝%> 来了",
+        "copy_color": "#ffffff",
+        "highlight_color": "#E6FF00",
+        "priority": 1,
+        "basemap_url": "",
+        "show_avatar": 0,
+        "effective_time": 0,
+        "web_basemap_url": "https://i0.hdslb.com/bfs/live/mlive/75e5cc5dc03c3ea8f2fd40d6833f9f11a8d26b88.png",
+        "web_effective_time": 2,
+        "web_effect_close": 0,
+        "web_close_time": 0,
+        "business": 1,
+        "copy_writing_v2": "<%晚安卡米宝宝%> 来了",
+        "icon_list": [],
+        "max_delay_time": 7,
+        "trigger_time": 1787712142869948414,
+        "identities": 6,
+        "effect_silent_time": 0,
+        "effective_time_new": 0,
+        "web_dynamic_url_webp": "",
+        "web_dynamic_url_apng": "",
+        "mobile_dynamic_url_webp": "",
+        "wealthy_info": null,
+        "new_style": 0,
+        "is_mystery": false,
+        "uinfo": {
+          "uid": 1224551233,
+          "base": {
+            "name": "晚安卡米宝宝",
+            "face": "https://i1.hdslb.com/bfs/face/6d4033dd4994076c23d33800f5e6e311becf1646.jpg",
+            "name_color": 0,
+            "is_mystery": false,
+            "risk_ctrl_info": null,
+            "origin_info": null,
+            "official_info": null,
+            "name_color_str": "#00D1F1"
+          },
+          "medal": {
+            "name": "早崎鸭",
+            "level": 39,
+            "color_start": 16736523,
+            "color_end": 16765060,
+            "color_border": 6809855,
+            "color": 16736523,
+            "id": 1206782,
+            "typ": 0,
+            "is_light": 1,
+            "ruid": 3493074573461871,
+            "guard_level": 3,
+            "score": 265792,
+            "guard_icon": "https://i0.hdslb.com/bfs/live/48360c8f3b7de8031e86ff1ef4a2dfc0ec2a61c2.png",
+            "honor_icon": "",
+            "v2_medal_color_start": "#4C7DFF99",
+            "v2_medal_color_end": "#4C7DFF99",
+            "v2_medal_color_border": "#58A1F8",
+            "v2_medal_color_text": "#FFFFFF",
+            "v2_medal_color_level": "#4C7DFFE6",
+            "user_receive_count": 0
+          },
+          "wealth": {
+            "level": 32,
+            "dm_icon_key": ""
+          },
+          "title": null,
+          "guard": {
+            "level": 3,
+            "expired_str": "2032-01-18 23:59:59"
+          },
+          "uhead_frame": null,
+          "guard_leader": null,
+          "anon": null,
+          "bubble_box": null,
+          "dm_config": null,
+          "name_color": null
+        },
+        "full_cartoon_id": 1805,
+        "priority_level": 0,
+        "wealth_style_info": null
+      }
+    }
+  }
+}{
+  "ENTRY_EFFECT": {
+    "room_display_id": 27885573,
+    "room_real_id": 27885573,
+    "type": "ENTRY_EFFECT",
+    "data": {
+      "cmd": "ENTRY_EFFECT",
+      "data": {
+        "id": 4,
+        "uid": 1224551233,
+        "target_id": 3493074573461871,
+        "mock_effect": 0,
+        "face": "https://i1.hdslb.com/bfs/face/6d4033dd4994076c23d33800f5e6e311becf1646.jpg",
+        "privilege_type": 3,
+        "copy_writing": "<%晚安卡米宝宝%> 来了",
+        "copy_color": "#ffffff",
+        "highlight_color": "#E6FF00",
+        "priority": 70,
+        "basemap_url": "",
+        "show_avatar": 0,
+        "effective_time": 0,
+        "web_basemap_url": "https://i0.hdslb.com/bfs/live/mlive/75e5cc5dc03c3ea8f2fd40d6833f9f11a8d26b88.png",
+        "web_effective_time": 2,
+        "web_effect_close": 0,
+        "web_close_time": 0,
+        "business": 1,
+        "copy_writing_v2": "<%晚安卡米宝宝%> 来了",
+        "icon_list": [],
+        "max_delay_time": 7,
+        "trigger_time": 1787712142869948414,
+        "identities": 6,
+        "effect_silent_time": 0,
+        "effective_time_new": 0,
+        "web_dynamic_url_webp": "",
+        "web_dynamic_url_apng": "",
+        "mobile_dynamic_url_webp": "",
+        "wealthy_info": null,
+        "new_style": 0,
+        "is_mystery": false,
+        "uinfo": {
+          "uid": 1224551233,
+          "base": {
+            "name": "晚安卡米宝宝",
+            "face": "https://i1.hdslb.com/bfs/face/6d4033dd4994076c23d33800f5e6e311becf1646.jpg",
+            "name_color": 0,
+            "is_mystery": false,
+            "risk_ctrl_info": null,
+            "origin_info": null,
+            "official_info": null,
+            "name_color_str": "#00D1F1"
+          },
+          "medal": {
+            "name": "早崎鸭",
+            "level": 39,
+            "color_start": 16736523,
+            "color_end": 16765060,
+            "color_border": 6809855,
+            "color": 16736523,
+            "id": 1206782,
+            "typ": 0,
+            "is_light": 1,
+            "ruid": 3493074573461871,
+            "guard_level": 3,
+            "score": 265792,
+            "guard_icon": "https://i0.hdslb.com/bfs/live/48360c8f3b7de8031e86ff1ef4a2dfc0ec2a61c2.png",
+            "honor_icon": "",
+            "v2_medal_color_start": "#4C7DFF99",
+            "v2_medal_color_end": "#4C7DFF99",
+            "v2_medal_color_border": "#58A1F8",
+            "v2_medal_color_text": "#FFFFFF",
+            "v2_medal_color_level": "#4C7DFFE6",
+            "user_receive_count": 0
+          },
+          "wealth": {
+            "level": 32,
+            "dm_icon_key": ""
+          },
+          "title": null,
+          "guard": {
+            "level": 3,
+            "expired_str": "2032-01-18 23:59:59"
+          },
+          "uhead_frame": null,
+          "guard_leader": null,
+          "anon": null,
+          "bubble_box": null,
+          "dm_config": null,
+          "name_color": null
+        },
+        "full_cartoon_id": 1805,
+        "priority_level": 0,
+        "wealth_style_info": null
+      }
+    }
+  }
+}{
+  "INTERACT_WORD_V2": {
+    "room_display_id": 27885573,
+    "room_real_id": 27885573,
+    "type": "INTERACT_WORD_V2",
+    "data": {
+      "cmd": "INTERACT_WORD_V2",
+      "data": {
+        "dmscore": 68,
+        "pb": "CMHW9McEEhLmmZrlronljaHnsbPlrp3lrp0iAwYDASgBMIWApg04kKW51AZAkIaL44Q0SjcI75KA6eydmgYQJxoJ5pep5bSO6bitIIvC/Qcoi8L9BzCEof8HOP/RnwNAAUgDYIWApg1owJwQYgIIAXj+z6mjjtfO5xiAAQOaAQCyAcoCCMHW9McEEmkKEuaZmuWuieWNoeexs+WuneWunRJKaHR0cHM6Ly9pMS5oZHNsYi5jb20vYmZzL2ZhY2UvNmQ0MDMzZGQ0OTk0MDc2YzIzZDMzODAwZjVlNmUzMTFiZWNmMTY0Ni5qcGdCByMwMEQxRjEauQEKCeaXqeW0jum4rRAnGIvC/QcghKH/Byj/0Z8DMIvC/Qc4/tNJSAFQ75KA6eydmgZYA2DAnBBqSmh0dHBzOi8vaTAuaGRzbGIuY29tL2Jmcy9saXZlLzQ4MzYwYzhmM2I3ZGU4MDMxZTg2ZmYxZWY0YTJkZmMwZWMyYTYxYzIucG5negkjNEM3REZGOTmCAQkjNEM3REZGOTmKAQcjNThBMUY4kgEHI0ZGRkZGRpoBCSM0QzdERkZFNiICCCAyFwgDEhMyMDMyLTAxLTE4IDIzOjU5OjU5ugEAwgEA",
+        "pb_decoded": {
+          "uid": 1224551233,
+          "uname": "晚安卡米宝宝",
+          "identities": [
+            3
+          ],
+          "msg_type": 1,
+          "room_id": 27885573,
+          "timestamp": 1787712144,
+          "score": 1787987936016,
+          "fans_medal_info": {
+            "target_id": 3493074573461871,
+            "medal_level": 39,
+            "medal_name": "早崎鸭",
+            "medal_color": 16736523,
+            "medal_color_start": 16736523,
+            "medal_color_end": 16765060,
+            "medal_color_border": 6809855,
+            "is_lighted": 1,
+            "guard_level": 3,
+            "anchor_roomid": 27885573,
+            "score": 265792
+          },
+          "contribution_info": {
+            "grade": 1
+          },
+          "trigger_time": 1787712142869948414,
+          "privilege_type": 3,
+          "contribution_info_v2": {},
+          "user_info": {
+            "uid": 1224551233,
+            "base": {
+              "name": "晚安卡米宝宝",
+              "face": "https://i1.hdslb.com/bfs/face/6d4033dd4994076c23d33800f5e6e311becf1646.jpg",
+              "name_color_str": "#00D1F1"
+            },
+            "medal": {
+              "name": "早崎鸭",
+              "level": 39,
+              "color_start": 16736523,
+              "color_end": 16765060,
+              "color_border": 6809855,
+              "color": 16736523,
+              "id": 1206782,
+              "is_light": 1,
+              "ruid": 3493074573461871,
+              "guard_level": 3,
+              "score": 265792,
+              "guard_icon": "https://i0.hdslb.com/bfs/live/48360c8f3b7de8031e86ff1ef4a2dfc0ec2a61c2.png",
+              "v2_medal_color_start": "#4C7DFF99",
+              "v2_medal_color_end": "#4C7DFF99",
+              "v2_medal_color_border": "#58A1F8",
+              "v2_medal_color_text": "#FFFFFF",
+              "v2_medal_color_level": "#4C7DFFE6"
+            },
+            "wealth": {
+              "level": 32
+            },
+            "guard": {
+              "level": 3,
+              "expired_str": "2032-01-18 23:59:59"
+            }
+          },
+          "user_anchor_relation": {}
+        },
+        "pb_decode_message": "success"
+      }
+    }
+  }
+}{
+  "ENTRY_EFFECT": {
+    "room_display_id": 27885573,
+    "room_real_id": 27885573,
+    "type": "ENTRY_EFFECT",
+    "data": {
+      "cmd": "ENTRY_EFFECT",
+      "data": {
+        "id": 382,
+        "uid": 503308916,
+        "target_id": 3493074573461871,
+        "mock_effect": 0,
+        "face": "https://i2.hdslb.com/bfs/face/8e5fff35f93bb1bfd93b233f299d0c44cf28ba6d.jpg",
+        "privilege_type": 3,
+        "copy_writing": "<%千秋斋主%> 来了",
+        "copy_color": "#F7F7F7",
+        "highlight_color": "#FFFFFF",
+        "priority": 1,
+        "basemap_url": "",
+        "show_avatar": 0,
+        "effective_time": 0,
+        "web_basemap_url": "https://i0.hdslb.com/bfs/live/mlive/5b14d1fc398f891c01f18e54a3384e75914d9333.png",
+        "web_effective_time": 4,
+        "web_effect_close": 1,
+        "web_close_time": 900,
+        "business": 6,
+        "copy_writing_v2": "<%千秋斋主%> 来了",
+        "icon_list": [],
+        "max_delay_time": 7,
+        "trigger_time": 1787712488463260545,
+        "identities": 6,
+        "effect_silent_time": 0,
+        "effective_time_new": 0,
+        "web_dynamic_url_webp": "",
+        "web_dynamic_url_apng": "",
+        "mobile_dynamic_url_webp": "",
+        "wealthy_info": {
+          "uid": 0,
+          "level": 35,
+          "level_total_score": 0,
+          "cur_score": 0,
+          "upgrade_need_score": 0,
+          "status": 0,
+          "dm_icon_key": ""
+        },
+        "new_style": 1,
+        "is_mystery": false,
+        "uinfo": {
+          "uid": 503308916,
+          "base": {
+            "name": "千秋斋主",
+            "face": "https://i2.hdslb.com/bfs/face/8e5fff35f93bb1bfd93b233f299d0c44cf28ba6d.jpg",
+            "name_color": 0,
+            "is_mystery": false,
+            "risk_ctrl_info": null,
+            "origin_info": null,
+            "official_info": null,
+            "name_color_str": "#00D1F1"
+          },
+          "medal": {
+            "name": "早崎鸭",
+            "level": 35,
+            "color_start": 7996451,
+            "color_end": 15304379,
+            "color_border": 6809855,
+            "color": 7996451,
+            "id": 1206782,
+            "typ": 0,
+            "is_light": 1,
+            "ruid": 3493074573461871,
+            "guard_level": 3,
+            "score": 93376,
+            "guard_icon": "https://i0.hdslb.com/bfs/live/48360c8f3b7de8031e86ff1ef4a2dfc0ec2a61c2.png",
+            "honor_icon": "",
+            "v2_medal_color_start": "#4C7DFF99",
+            "v2_medal_color_end": "#4C7DFF99",
+            "v2_medal_color_border": "#58A1F8",
+            "v2_medal_color_text": "#FFFFFF",
+            "v2_medal_color_level": "#4C7DFFE6",
+            "user_receive_count": 0
+          },
+          "wealth": {
+            "level": 35,
+            "dm_icon_key": ""
+          },
+          "title": null,
+          "guard": {
+            "level": 3,
+            "expired_str": "2026-09-06 23:59:59"
+          },
+          "uhead_frame": null,
+          "guard_leader": null,
+          "anon": null,
+          "bubble_box": null,
+          "dm_config": null,
+          "name_color": null
+        },
+        "full_cartoon_id": 1800,
+        "priority_level": 0,
+        "wealth_style_info": {
+          "url": "https://i0.hdslb.com/bfs/live/feeeb932f1a49b7f9ecba64f219303e6ad8735ef.png"
+        }
+      }
+    }
+  }
+}{
+  "INTERACT_WORD_V2": {
+    "room_display_id": 27885573,
+    "room_real_id": 27885573,
+    "type": "INTERACT_WORD_V2",
+    "data": {
+      "cmd": "INTERACT_WORD_V2",
+      "data": {
+        "dmscore": 68,
+        "pb": "CPTE/+8BEgzljYPnp4vmlovkuLsiAwYDASgBMIWApg046ae51AZAj9qEkYQ0SjcI75KA6eydmgYQIxoJ5pep5bSO6bitIKOI6AMoo4joAzC7jaYHOP/RnwNAAUgDYIWApg1owNkFYgB4gbeH25XhzucYgAEDmgEAsgHEAgj0xP/vARJjCgzljYPnp4vmlovkuLsSSmh0dHBzOi8vaTIuaGRzbGIuY29tL2Jmcy9mYWNlLzhlNWZmZjM1ZjkzYmIxYmZkOTNiMjMzZjI5OWQwYzQ0Y2YyOGJhNmQuanBnQgcjMDBEMUYxGrkBCgnml6nltI7puK0QIxijiOgDILuNpgco/9GfAzCjiOgDOP7TSUgBUO+SgOnsnZoGWANgwNkFakpodHRwczovL2kwLmhkc2xiLmNvbS9iZnMvbGl2ZS80ODM2MGM4ZjNiN2RlODAzMWU4NmZmMWVmNGEyZGZjMGVjMmE2MWMyLnBuZ3oJIzRDN0RGRjk5ggEJIzRDN0RGRjk5igEHIzU4QTFGOJIBByNGRkZGRkaaAQkjNEM3REZGRTYiAggjMhcIAxITMjAyNi0wOS0wNiAyMzo1OTo1OboBAMIBAA==",
+        "pb_decoded": {
+          "uid": 503308916,
+          "uname": "千秋斋主",
+          "identities": [
+            3
+          ],
+          "msg_type": 1,
+          "room_id": 27885573,
+          "timestamp": 1787712489,
+          "score": 1787815865615,
+          "fans_medal_info": {
+            "target_id": 3493074573461871,
+            "medal_level": 35,
+            "medal_name": "早崎鸭",
+            "medal_color": 7996451,
+            "medal_color_start": 7996451,
+            "medal_color_end": 15304379,
+            "medal_color_border": 6809855,
+            "is_lighted": 1,
+            "guard_level": 3,
+            "anchor_roomid": 27885573,
+            "score": 93376
+          },
+          "contribution_info": {},
+          "trigger_time": 1787712488463260545,
+          "privilege_type": 3,
+          "contribution_info_v2": {},
+          "user_info": {
+            "uid": 503308916,
+            "base": {
+              "name": "千秋斋主",
+              "face": "https://i2.hdslb.com/bfs/face/8e5fff35f93bb1bfd93b233f299d0c44cf28ba6d.jpg",
+              "name_color_str": "#00D1F1"
+            },
+            "medal": {
+              "name": "早崎鸭",
+              "level": 35,
+              "color_start": 7996451,
+              "color_end": 15304379,
+              "color_border": 6809855,
+              "color": 7996451,
+              "id": 1206782,
+              "is_light": 1,
+              "ruid": 3493074573461871,
+              "guard_level": 3,
+              "score": 93376,
+              "guard_icon": "https://i0.hdslb.com/bfs/live/48360c8f3b7de8031e86ff1ef4a2dfc0ec2a61c2.png",
+              "v2_medal_color_start": "#4C7DFF99",
+              "v2_medal_color_end": "#4C7DFF99",
+              "v2_medal_color_border": "#58A1F8",
+              "v2_medal_color_text": "#FFFFFF",
+              "v2_medal_color_level": "#4C7DFFE6"
+            },
+            "wealth": {
+              "level": 35
+            },
+            "guard": {
+              "level": 3,
+              "expired_str": "2026-09-06 23:59:59"
+            }
+          },
+          "user_anchor_relation": {}
+        },
+        "pb_decode_message": "success"
+      }
+    }
+  }
+}

@@ -75,7 +75,7 @@ def load_json_files():
         save_json("files/audience.json", MEMORY["audience"])
         add_log("No audience.json. Total audience starts with 0")
 
-    birthday_cache_path = "birthday_cache.json"
+    birthday_cache_path = "stable_json/birthday_cache.json"
     if os.path.exists(birthday_cache_path):
         try:
             with open(birthday_cache_path, "r", encoding="utf-8") as f:

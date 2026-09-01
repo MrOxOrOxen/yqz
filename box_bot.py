@@ -156,7 +156,7 @@ async def call_at_box(uid, uname, msg):
     if uid_str in last_query_time and now - last_query_time[uid_str] < 10:
         return
 
-    if uid not in [ADMIN_ID, YQZ_ID, XIAOZAO_ID]:
+    if uid not in PERMISSION["at"]:
         return
 
     if uid == ADMIN_ID:
@@ -402,7 +402,7 @@ async def call_month_at_box(uid, uname, msg):
     if uid_str in last_query_time and now - last_query_time[uid_str] < 10:
         return
 
-    if uid not in [ADMIN_ID, YQZ_ID, XIAOZAO_ID]:
+    if uid not in PERMISSION["at"]:
         return
 
     if uid == ADMIN_ID:

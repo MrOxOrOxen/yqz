@@ -41,6 +41,9 @@ from hotreload_config import HOT_RELOAD_CONFIG
 import hotglobal
 import birthday_cache_manage
 import livetime
+from livetime import load_livetime, load_livedays, save_livetime, save_cross_month
+
+entry_lock = asyncio.Lock()
 
 # request_settings.set("impersonate", "chrome131")
 select_client("aiohttp")
@@ -418,7 +421,37 @@ async def on_danmaku(event):
         await call_gift(uid, uname)
     elif "呼叫礼物姬@" in msg:
         await call_at_gift(uid, uname, msg)
+    elif msg == "查盲盒":
+        await call_box(uid, uname, "呼叫盲盒姬")
+
+    elif msg in ["查时长", "查开播时长", "查直播时长"]:
+        # if LIVE_STATUS != 1: return
+        if uid not in PERMISSION["livetime"]: return
+        live_start_timestamp = MEMORY["meta"]["live_time"]
+        live_hours, live_mins = await load_livetime(live_start_timestamp, LIVE_STATUS)
+        if live_hours == 0 and live_mins == 0:
+            reply = f"本月云宝还没有直播哦~"
+        elif live_hours == 0 and live_mins != 0:
+            reply = f"本月云宝已经直播了{live_mins}分钟！继续加油！"
+        elif live_hours != 0 and live_mins == 0:
+            reply = f"本月云宝已经直播了{live_mins}小时！继续加油！"
+        else:
+            reply = f"本月云宝已经直播了{live_hours}小时{live_mins}分钟！继续加油！"
+        await reply_queue.put((uid, reply))
+        add_log(f"开播时长: {live_hours}h{live_mins}min")
     
+    elif msg in ["查开播天数", "查直播天数"]:
+        # if LIVE_STATUS != 1: return
+        if uid not in PERMISSION["livetime"]: return
+        live_start_timestamp = MEMORY["meta"]["live_time"]
+        live_days = await load_livedays(live_start_timestamp, LIVE_STATUS)
+        if live_days == 0:
+            reply = f"本月云宝还没有直播哦～"
+        else:
+            reply = f"本月云宝已经直播了{live_days}天！继续加油！"
+        await reply_queue.put((uid, reply))
+        add_log(f"开播天数: {live_days}")
+  
     # 月度全局盲盒姬
     elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(.*?)盲盒姬总部$', msg):
         await call_month_all_box(uid, uname, msg)
@@ -596,133 +629,111 @@ async def handle_guard(event):
 
 # @room.on('INTERACT_WORD_V2')
 # async def interact_word(event):
-
-@room.on('ENTRY_EFFECT')
-async def on_entry_effect(event):
-    global interact_cache, birthday_cache, LIVE_STATUS, STATUS
-    
-    # print(f"ENTRY_EFFECT: {event}")
-    # with open("debug/entry_effect.json", "a", encoding="utf-8") as f:
-    #     json.dump(event, f, ensure_ascii=False, indent=2)
-    '''
-    try:
-        with open("error_log.json", "a", encoding="utf-8") as f:
-            json.dump(event, f, ensure_ascii=False, indent=2)
-    except:
-        pass
-
-    try:
-        pb = event["data"]["data"].get("pb_decoded", {})
-        print(
-            f"[HANDLER INTERACT] "
-            f"uid={pb.get('uid')} "
-            f"uname={pb.get('uname')}"
-        )
-    except Exception as e:
-        print("[HANDLER ERROR]", repr(e))
-    '''
+admin_last_welcome_time = 0
+yqz_last_welcome_time = 0
+async def handle_user_entry(uid, uname, medal, guard_level, source):
+    global interact_cache, birthday_cache, LIVE_STATUS, STATUS, admin_last_welcome_time, yqz_last_welcome_time
 
     if LIVE_STATUS != 1:
         return
 
-    data = event['data']['data']
-    uname = data.get("uinfo", {}).get("base", {}).get("name", "")
-    uid = data.get("uinfo", {}).get("uid", 0)
-    medal = data.get("uinfo", {}).get("medal", {})
-    guard_level = data.get("uinfo", {}).get("guard", {}).get("level", 0)
-    add_log(f"{uname}, {uid}, {medal['name']}, {medal['level']}, {guard_level}")
-    '''
-    pb_decoded = data.get('pb_decoded', {})
-    if not pb_decoded:
-        return
-    uname = pb_decoded.get('uname')
-    user_info = pb_decoded.get('user_info', {})
-    medal = user_info.get('medal') if user_info else None
-    uid = user_info.get('uid', 0) if user_info else 0
-    '''
+    try:
+        add_log(f"User Entry (From {source}): {uname}, {uid}, {medal['name']}, {medal['level']}, {guard_level}")
+    except Exception as e:
+        add_log(f"[ERROR] User Entry: {e}")
 
     reply = None
     msg = None
     trigger_birthday = False
     trigger_interact = False
 
-    if uid in BIRTHDAY_MAP and uid not in birthday_cache:
-        map_uid = BIRTHDAY_MAP[uid]
-        for birthday_str, msg_temp, is_moon, night_agree, only_leap in map_uid:
-            if is_birthday_today(birthday_str, is_moon, only_leap):
-                trigger_birthday = True
-                if night_agree != 1:
-                    if datetime.now().strftime("%H%M") < "0800":
-                        trigger_birthday = False
-                
-                if trigger_birthday:
-                    msg = msg_temp.format(uname=uname)
-                    birthday_cache.add(uid)
-                    birthday_cache_manage.save_birthday_cache()
-                    # MEMORY["audience"]["birthday_cache"] = list(birthday_cache)
-                    # save_json("files/audience.json", MEMORY["audience"])
-                    break
+    async with entry_lock:
+        now = time.time()
+        if uid in BIRTHDAY_MAP and uid not in birthday_cache:
+            map_uid = BIRTHDAY_MAP[uid]
+            for birthday_str, msg_temp, is_moon, night_agree, only_leap in map_uid:
+                if is_birthday_today(birthday_str, is_moon, only_leap):
+                    trigger_birthday = True
+                    if night_agree != 1:
+                        if datetime.now().strftime("%H%M") < "0800":
+                            trigger_birthday = False
+                    
+                    if trigger_birthday:
+                        msg = msg_temp.format(uname=uname)
+                        birthday_cache.add(uid)
+                        birthday_cache_manage.save_birthday_cache()
+                        # MEMORY["audience"]["birthday_cache"] = list(birthday_cache)
+                        # save_json("files/audience.json", MEMORY["audience"])
+                        break
 
-    trigger_interact = (uid not in interact_cache) or (uid == ADMIN_ID)
-    if trigger_interact:
-        # add_log(f"INTERACT_WORD_V2: {event}")
-        if uid == ADMIN_ID:
-            if STATUS != 0:
-                if STATUS == 2: STATUS = 1
-                target_date = datetime(2026, 3, 20)
-                today = datetime.now().date()
-                days_passed = abs((target_date.date() - today).days) + 1
-                if days_passed % 10 == 0:
-                    reply = f"[欢迎姬]哇！今天是卡米宝宝和云宝相遇的{days_passed}天哎！{days_passed}天快乐！"
-                elif today.month == 3 and today.day == 20:
-                    years_passed = today.year - 2026
-                    reply = f"[欢迎姬]哇！今天是卡米宝宝和云宝相遇的{years_passed}周年哎！{years_passed}周年快乐！"
-                else:
-                    reply = f"[欢迎姬]报告！发现{days_passed}个卡米宝宝进入云宝的直播间！"
-            else:
-                reply = "[欢迎姬]哎？卡米宝宝不是睡了吗？怎么又回来了？"
-                STATUS = 1
-                if uid in interact_cache:
-                    add_log(f"[欢迎姬] 卡米宝宝没有睡觉")
-
-        elif uid == ASPK_ID:
-            reply = f"[欢迎姬]欢迎帅神！！"
-
-        elif medal and uid not in REFUSE_WELCOME_LIST:
-            medal_name = medal.get('name', None)
-            medal_level = medal.get('level', 0)
-            if medal_name == "早崎鸭":
-                if uid == YQZ_ID:
-                    if int(time.time()) - MEMORY["meta"]["live_time"] <= 120:
-                        current_timestr = datetime.now().strftime("%H%M")
-                        if current_timestr >= "0330" and current_timestr <= "1000":
-                            reply = "[欢迎姬]早上好云宝！今天也要认真工作哦！"
-                        elif current_timestr > "1000" and current_timestr <= "1300":
-                            reply = "[欢迎姬]中午好云宝！今天也要认真工作哦！"
-                        elif current_timestr > "1300" and current_timestr <= "1630":
-                            reply = "[欢迎姬]下午好云宝！今天也要认真工作哦！"
-                        else:
-                            reply = "[欢迎姬]晚上好云宝！今天也要认真工作哦！"
+        is_admin_allowed = (uid == ADMIN_ID) and (now - admin_last_welcome_time > 5)
+        is_yqz_allowed = (uid == YQZ_ID) and (now - yqz_last_welcome_time > 5)
+        trigger_interact = (uid not in interact_cache) or is_admin_allowed or is_yqz_allowed
+        if trigger_interact:
+            # if uid != ADMIN_ID:
+            #     interact_cache.add(uid)
+            #     MEMORY["audience"]["interact_cache"] = list(interact_cache)
+            #     MEMORY["audience"]["total_audience"] = MEMORY["audience"].get("total_audience", 0) + 1
+            
+            if uid == ADMIN_ID:
+                admin_last_welcome_time = now
+                if STATUS != 0:
+                    if STATUS == 2: STATUS = 1
+                    target_date = datetime(2026, 3, 20)
+                    today = datetime.now().date()
+                    days_passed = abs((target_date.date() - today).days) + 1
+                    if days_passed % 10 == 0 and uid not in interact_cache:
+                        reply = f"[欢迎姬]哇！今天是卡米宝宝和云宝相遇的{days_passed}天哎！{days_passed}天快乐！"
+                    elif today.month == 3 and today.day == 20 and uid not in interact_cache:
+                        years_passed = today.year - 2026
+                        reply = f"[欢迎姬]哇！今天是卡米宝宝和云宝相遇的{years_passed}周年哎！{years_passed}周年快乐！"
                     else:
-                        reply = "[欢迎姬]报告！发现云崎早_haya同学进入直播间！"
-                elif uid in WELCOME_MAP:
-                    reply = WELCOME_MAP[uid].format(uname=uname)
-                elif medal_level > 30 or guard_level in [1, 2]:
-                    if len(uname) > 16:
-                        uname = uname[:13] + "..."
-                    reply = f"[欢迎姬]报告！一只叫{uname}的早崎鸭偷偷进入了直播间！" 
+                        reply = f"[欢迎姬]报告！发现{days_passed}个卡米宝宝进入云宝的直播间！"
+                else:
+                    reply = "[欢迎姬]哎？卡米宝宝不是睡了吗？怎么又回来了？"
+                    STATUS = 1
+                    if uid in interact_cache:
+                        add_log(f"[欢迎姬] 卡米宝宝没有睡觉")
 
-                print(f"欢迎姬应该出现的reply: {reply}")
+            elif uid == ASPK_ID:
+                reply = f"[欢迎姬]欢迎帅神！！"
 
-        MEMORY["audience"]["total_audience"] = MEMORY["audience"].get("total_audience", 0) + 1
-        interact_cache.add(uid)
-        MEMORY["audience"]["interact_cache"] = list(interact_cache)
-        # save_json("files/audience.json", MEMORY["audience"])
+            elif medal and uid not in REFUSE_WELCOME_LIST:
+                medal_name = medal.get('name', None)
+                medal_level = medal.get('level', 0)
+                if medal_name == "早崎鸭":
+                    if uid == YQZ_ID:
+                        yqz_last_welcome_time = now
+                        if int(time.time()) - MEMORY["meta"]["live_time"] <= 120:
+                            current_timestr = datetime.now().strftime("%H%M")
+                            if current_timestr >= "0330" and current_timestr <= "1000":
+                                reply = "[欢迎姬]早上好云宝！今天也要认真工作哦！"
+                            elif current_timestr > "1000" and current_timestr <= "1300":
+                                reply = "[欢迎姬]中午好云宝！今天也要认真工作哦！"
+                            elif current_timestr > "1300" and current_timestr <= "1630":
+                                reply = "[欢迎姬]下午好云宝！今天也要认真工作哦！"
+                            else:
+                                reply = "[欢迎姬]晚上好云宝！今天也要认真工作哦！"
+                        else:
+                            reply = "[欢迎姬]报告！发现云崎早_haya同学进入直播间！"
+                    elif uid in WELCOME_MAP:
+                        reply = WELCOME_MAP[uid].format(uname=uname)
+                    elif medal_level > 30 or guard_level in [1, 2]:
+                        if len(uname) > 16:
+                            uname = uname[:13] + "..."
+                        reply = f"[欢迎姬]报告！一只叫{uname}的早崎鸭偷偷进入了直播间！" 
 
-    else:
-        if uid == YQZ_ID:
-            reply = f"[欢迎姬]报告！发现云崎早_haya同学进入直播间！"
-            add_log("[欢迎姬] 云崎早同学又一次进入直播间")
+                    print(f"欢迎姬应该出现的reply: {reply}")
+
+            MEMORY["audience"]["total_audience"] = MEMORY["audience"].get("total_audience", 0) + 1
+            interact_cache.add(uid)
+            MEMORY["audience"]["interact_cache"] = list(interact_cache)
+            # save_json("files/audience.json", MEMORY["audience"])
+
+        else:
+            if uid == YQZ_ID:
+                reply = f"[欢迎姬]报告！发现云崎早_haya同学进入直播间！"
+                add_log("[欢迎姬] 云崎早同学又一次进入直播间")
             
     if reply is not None:
         try:
@@ -740,8 +751,29 @@ async def on_entry_effect(event):
         else:
             await reply_queue.put((uid, msg))
         add_log(f"[欢迎姬] {uname}的生日")
+    
 
+@room.on('ENTRY_EFFECT')
+async def on_entry_effect(event):
+    data = event['data']['data']
+    uname = data.get("uinfo", {}).get("base", {}).get("name", "")
+    uid = data.get("uinfo", {}).get("uid", 0)
+    medal = data.get("uinfo", {}).get("medal", {})
+    guard_level = data.get("uinfo", {}).get("guard", {}).get("level", 0)
+    await handle_user_entry(uid, uname, medal, guard_level, source="ENTRY_EFFECT")
 
+@room.on('INTERACT_WORD_V2')
+async def interact_word(event):
+    data = event['data']['data']
+    pb_decoded = data.get('pb_decoded', {})
+    if not pb_decoded:
+        return
+    uname = pb_decoded.get('uname')
+    user_info = pb_decoded.get('user_info', {})
+    medal = user_info.get('medal') if user_info else None
+    uid = user_info.get('uid', 0) if user_info else 0
+    await handle_user_entry(uid, uname, medal, 0, source="INTERACT_WORD_V2")
+    
 @room.on('COMMON_NOTICE_DANMAKU')
 async def on_common_notice_danmaku(event):
     global LIVE_STATUS
@@ -925,7 +957,8 @@ async def on_preparing(event):
     add_log("[LOG] PREPARING")
     prepare_time = datetime.now().strftime("%H:%M")
     prepare_timestamp = int(time.time())
-    live_length = int(prepare_timestamp - MEMORY["meta"]["live_time"]) // 60
+    start_timestamp = MEMORY["meta"]["live_time"]
+    live_length = int(prepare_timestamp - start_timestamp) // 60
     live_hours = int(live_length) // 60
     live_mins = int(live_length) % 60
     live_start_time = time.strftime("%H:%M", time.localtime(MEMORY["meta"]["live_time"]))
@@ -943,6 +976,7 @@ async def on_preparing(event):
         #     await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=gid)
         #     await asyncio.sleep(3)
         pass
+        
         
         if hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_LIVE_TIMES <= 5 and hotglobal.PUSH_TIMES <= 8:
             tasks = [qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
@@ -964,12 +998,11 @@ async def on_preparing(event):
     await asyncio.sleep(5)
     title = MEMORY["meta"]["title"] or "天  才  主  播  ！"
     await send_email(live_start_time, prepare_time, time_length, title)
+    await save_livetime(start_timestamp, prepare_timestamp)
     MEMORY["meta"]["title"] = title
-    MEMORY["meta"]["live_time"] = 0
+    # MEMORY["meta"]["live_time"] = 0
     save_json("files/meta.json", MEMORY["meta"])
 
-# @room.on('INTERACT_WORD_V2')
-# async def interact_word(event):
 #     with open("debug/interact_word_v2.json", "a", encoding="utf-8") as f:
 #         json.dump(event, f, ensure_ascii=False, indent=2)
     # print(f"INTERACT_WORD_V2: {event}")
@@ -1246,6 +1279,12 @@ async def on_fans_club_poke_gift_notice(event):
     print(f"FANS_CLUB_POKE_GIFT_NOTICE: {event}")
 '''
 
+async def cross_month_task():
+    if LIVE_STATUS == 1 and MEMORY["meta"]["live_time"] != 0:
+        await save_cross_month(MEMORY["meta"]["live_time"])
+    else:
+        await save_cross_month(0)
+
 # FastAPI & SSL Patch
 scheduler = AsyncIOScheduler()
 
@@ -1255,7 +1294,7 @@ async def lifespan(app: FastAPI):
     birthday_cache_manage.load_birthday_cache()
     scheduler.add_job(hotglobal.daily_reset_push_times, 'cron', hour=0, minute=0)
     scheduler.add_job(birthday_cache_manage.daily_reset_birthday_cache, 'cron', hour=0, minute=0)
-    scheduler.add_job(livetime.save_cross_month, 'cron', day=1, hour=0, minute=0, args=[MEMORY["meta"]["live_time"]])
+    scheduler.add_job(cross_month_task, 'cron', day=1, hour=0, minute=0)
     scheduler.start()
     yield
     birthday_cache_manage.save_birthday_cache()
