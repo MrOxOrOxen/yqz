@@ -434,7 +434,7 @@ async def on_danmaku(event):
         elif live_hours == 0 and live_mins != 0:
             reply = f"本月云宝已经直播了{live_mins}分钟！继续加油！"
         elif live_hours != 0 and live_mins == 0:
-            reply = f"本月云宝已经直播了{live_mins}小时！继续加油！"
+            reply = f"本月云宝已经直播了{live_hours}小时！继续加油！"
         else:
             reply = f"本月云宝已经直播了{live_hours}小时{live_mins}分钟！继续加油！"
         await reply_queue.put((uid, reply))
