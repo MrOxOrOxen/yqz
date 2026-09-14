@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from bilibili_api import live, sync, Credential, user, select_client
 from bilibili_api.live import LiveDanmaku
-from data import SESSDATA, BILI_JCT, BUVID3
+from data import *
 import random
 from datetime import datetime
 import re
@@ -43,9 +43,11 @@ import birthday_cache_manage
 import livetime
 from livetime import load_livetime, load_livedays, save_livetime, save_cross_month
 
+import blivedm
+import blivedm.models.web as web_models
+
 entry_lock = asyncio.Lock()
 
-# request_settings.set("impersonate", "chrome131")
 select_client("aiohttp")
 
 STATUS = 1
@@ -54,39 +56,6 @@ LIVE_STATUS = 0
 
 # code hot update
 _hot_reload_state = {}
-
-# BIRTHDAY_CACHE_FILE = "stable_json/birthday_cache.json"
-
-'''
-def load_birthday_cache():
-    global birthday_cache
-    if os.path.exists(BIRTHDAY_CACHE_FILE):
-        try:
-            with open(BIRTHDAY_CACHE_FILE, "r", encoding='utf-8') as f:
-                data = json.load(f)
-            if isinstance(data, list):
-                birthday_cache = set(data)
-            else:
-                birthday_cache = set()
-        except Exception as e:
-            add_log(f"读取 birthday_cache.json 失败: {e}")
-            birthday_cache = set()
-    else:
-        birthday_cache = set()
-        try:
-            with open(BIRTHDAY_CACHE_FILE, "w", encoding='utf-8') as f:
-                json.dump([], f)
-        except Exception as e:
-            add_log(f"创建 birthday_cache.json 失败: {e}")
-
-def save_birthday_cache():
-    save_json(BIRTHDAY_CACHE_FILE, list(birthday_cache))
-
-def daily_reset_birthday_cache():
-    birthday_cache.clear()
-    save_birthday_cache()
-    add_log("[定时任务] birthday_cache.json 已在 0:00 定时清空")
-'''
 
 def check_hot_reload():
     for filename, state in _hot_reload_state.items():
@@ -134,17 +103,6 @@ def check_hot_reload():
             
         except Exception as e:
             add_log(f"[HOT RELOAD ERROR] {filename}: {e}")
-
-# 用于danmu_egg的所有时间戳（已弃用）
-last_gachi_danmu_trigger = 0
-last_question_mark_trigger = 0
-last_circle_trigger = 0
-last_good_night_trigger = 0
-last_haha_trigger = 0
-
-# total_battery = 0
-# is_loss_warning_sent = False
-# current_gear = 0
 
 async def init_get_room_status():
     global LIVE_STATUS
@@ -213,7 +171,6 @@ def update_gift_summary(uid, uname, gift_name, num, battery):
         user["gift_list"][gift_name] = user["gift_list"].get(gift_name, 0) + num
 
 def update_box_summary(uid, uname, count, cost, profit, original_box_name):
-    # original_box_name = BOX_MEMORY_MAP.get(original_box_name, original_box_name)
     uid_str = str(uid)
     if uid_str not in MEMORY["box"]:
         MEMORY["box"][uid_str] = {
@@ -390,170 +347,6 @@ async def periodic_tasks():
 # 监听
 room = live.LiveDanmaku(ROOM_ID, credential=credential)
 
-# box_names_pattern = '|'.join(re.escape(name) for name in BOX_NAME_LIST)
-
-@room.on('DANMU_MSG')
-async def on_danmaku(event):
-    global LIVE_STATUS
-    data = event['data']['info']
-    msg, uid, uname = data[1], data[2][0], data[2][1]
-    
-    '''
-    if msg == "呼叫礼物姬":
-        await call_gift(uid, uname)
-    elif "呼叫礼物姬@" in msg:
-        await call_at_gift(uid, uname, msg)
-    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬总部$', msg):
-        await call_month_all_box(uid, uname, msg)
-    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬@(\d+)$', msg):
-        await call_month_at_box(uid, uname, msg)
-    elif re.search(r'^呼叫(?:\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(?:心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬$', msg):
-        await call_month_box(uid, uname, msg)
-    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬总部$', msg):
-        await call_all_box(uid, uname, msg)
-    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬@(\d+)$', msg):
-        await call_at_box(uid, uname, msg)
-    elif re.search(r'^呼叫(心动|幸运S|幸运|真爱|梦幻之夏|噜噜|棕意|大航海|欧气|猪猪侠)?盲盒姬$', msg):
-        await call_box(uid, uname, msg)
-    '''
-
-    if msg == "呼叫礼物姬":
-        await call_gift(uid, uname)
-    elif "呼叫礼物姬@" in msg:
-        await call_at_gift(uid, uname, msg)
-    elif msg == "查盲盒":
-        await call_box(uid, uname, "呼叫盲盒姬")
-
-    elif msg in ["查时长", "查开播时长", "查直播时长"]:
-        # if LIVE_STATUS != 1: return
-        if uid not in PERMISSION["livetime"]: return
-        live_start_timestamp = MEMORY["meta"]["live_time"]
-        live_hours, live_mins = await load_livetime(live_start_timestamp, LIVE_STATUS)
-        if live_hours == 0 and live_mins == 0:
-            reply = f"本月云宝还没有直播哦~"
-        elif live_hours == 0 and live_mins != 0:
-            reply = f"本月云宝已经直播了{live_mins}分钟！继续加油！"
-        elif live_hours != 0 and live_mins == 0:
-            reply = f"本月云宝已经直播了{live_hours}小时！继续加油！"
-        else:
-            reply = f"本月云宝已经直播了{live_hours}小时{live_mins}分钟！继续加油！"
-        await reply_queue.put((uid, reply))
-        add_log(f"开播时长: {live_hours}h{live_mins}min")
-    
-    elif msg in ["查开播天数", "查直播天数"]:
-        # if LIVE_STATUS != 1: return
-        if uid not in PERMISSION["livetime"]: return
-        live_start_timestamp = MEMORY["meta"]["live_time"]
-        live_days = await load_livedays(live_start_timestamp, LIVE_STATUS)
-        if live_days == 0:
-            reply = f"本月云宝还没有直播哦～"
-        else:
-            reply = f"本月云宝已经直播了{live_days}天！继续加油！"
-        await reply_queue.put((uid, reply))
-        add_log(f"开播天数: {live_days}")
-  
-    # 月度全局盲盒姬
-    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(.*?)盲盒姬总部$', msg):
-        await call_month_all_box(uid, uname, msg)
-    
-    # 指定uid月度盲盒姬
-    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(.*?)盲盒姬@(\d+)$', msg):
-        await call_month_at_box(uid, uname, msg)
-    
-    # 月度盲盒姬
-    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(.*?)盲盒姬$', msg):
-        await call_month_box(uid, uname, msg)
-    
-    # 全局盲盒姬
-    elif re.search(rf'^呼叫(.*?)盲盒姬总部$', msg):
-        await call_all_box(uid, uname, msg)
-    
-    # 指定uid盲盒姬
-    elif re.search(rf'^呼叫(.*?)盲盒姬@(\d+)$', msg):
-        await call_at_box(uid, uname, msg)
-    
-    # 盲盒姬
-    elif re.search(rf'^呼叫(.*?)盲盒姬$', msg):
-        await call_box(uid, uname, msg)
-
-    if LIVE_STATUS == 1:
-        # check_hot_reload()
-        await danmu_egg(uid, msg, DANMU_COUNT)
-        update_danmu_log(uid, uname, msg)
-
-@room.on('SEND_GIFT')
-async def on_gift(event):
-    global LIVE_STATUS
-    # print(f"SEND_GIFT: {event}")
-    if LIVE_STATUS != 1:
-        return
-    data = event['data']['data']
-    uid, gift_name, num = data.get('uid'), data.get('giftName'), data.get('num', 1)
-    uname = data.get('sender_uinfo', {}).get('base', {}).get('name', '用户')
-    blind_data = data.get('blind_gift') or (data.get('batch_combo_send') and data['batch_combo_send'].get('blind_gift'))
-
-    if blind_data:
-        original_box_name = blind_data.get('original_gift_name', "盲盒")
-        bg_cost_battery = blind_data.get('original_gift_price', 0) / 100
-        g_profit_battery = blind_data.get('gift_tip_price', 0) / 100
-        update_box_summary(uid, uname, num, bg_cost_battery*num, g_profit_battery*num, original_box_name)
-        save_json("files/box.json", MEMORY["box"])
-        update_gift_summary(uid, uname, gift_name, num, g_profit_battery*num)
-        update_all_log(uid, uname, gift_name, g_profit_battery*num)
-        add_log(f"[盲盒] {uname} x{num} ({g_profit_battery*num:.1f} 电池)")
-
-        check_hot_reload()
-        await box_egg(uid, uname, gift_name, num, bg_cost_battery, g_profit_battery)
-        await huli_egg(uid, gift_name)
-        await check_gachi_egg(uid, None, g_profit_battery)
-        await check_global_loss_warning(uid, uname)
-
-        if g_profit_battery >= 1000:
-        # if g_profit_battery >= 5000: # for annual
-            reply = thank_gift(uid, uname, gift_name, g_profit_battery)
-            if reply:
-                await handle_thank_reply(uid, uname, reply)
-        MEMORY["meta"]["total_battery"] += g_profit_battery*num
-        await handle_total_gift_reply(YQZ_ID, MEMORY["meta"]["total_battery"])
-
-    else:
-        '''
-        battery = (data.get('price', 0) * num) / 100
-        update_gift_summary(uid, uname, gift_name, num, battery)
-        update_all_log(uid, uname, gift_name, battery)
-        add_log(f"[礼物] {uname} {gift_name}x{num} ({battery:.1f} 电池)")
-        single_battery = battery / num
-        await check_gachi_egg(uid, None, single_battery)
-        if battery >= 1000:
-            reply = thank_gift(uid, uname, gift_name, single_battery)
-            await handle_thank_reply(uid, uname, reply)
-        MEMORY["meta"]["total_battery"] += battery
-        await handle_total_gift_reply(YQZ_ID, MEMORY["meta"]["total_battery"])
-        '''
-
-        total_coin = data.get('total_coin', 0)
-        if total_coin > 0:
-            battery = total_coin / 100
-        else:
-            battery = (data.get('price', 0) * num) / 100
-        
-        single_battery = battery / num if num > 0 else battery
-        
-        update_gift_summary(uid, uname, gift_name, num, battery)
-        update_all_log(uid, uname, gift_name, single_battery)
-        add_log(f"[礼物] {uname} {gift_name}x{num} ({battery:.1f} 电池)")
-
-        if battery >= 1000:
-            reply = thank_gift(uid, uname, gift_name, single_battery)
-            if reply:
-                await handle_thank_reply(uid, uname, reply)
-        MEMORY["meta"]["total_battery"] += battery
-        check_hot_reload()
-        await gift_egg(uid, uname, gift_name, num, single_battery)
-        await huli_egg(uid, gift_name)
-        await handle_total_gift_reply(YQZ_ID, MEMORY["meta"]["total_battery"])
-        await check_gachi_egg(uid, None, single_battery)
-
 @room.on('SUPER_CHAT_MESSAGE')
 async def on_sc(event):
     # print(f"SUPER_CHAT_MESSAGE: {event}")
@@ -611,24 +404,6 @@ async def handle_toast(event):
     else:
         pass
 
-'''
-@room.on('GUARD_BUY')
-async def handle_guard(event):
-    # print(f"GUARD_BUY: {event}")
-    global LIVE_STATUS
-    if LIVE_STATUS != 1:
-        return 
-    data = event['data']['data']
-    await asyncio.sleep(2)
-    await record_to_guard_log(
-        uid=data.get('uid'), uname=data.get('username'),
-        price=data.get('price', 0) / 100, guard_level=data.get('guard_level'),
-        start_time=data.get('start_time'), source="大航海 (GUARD)"
-    )
-'''
-
-# @room.on('INTERACT_WORD_V2')
-# async def interact_word(event):
 admin_last_welcome_time = 0
 yqz_last_welcome_time = 0
 async def handle_user_entry(uid, uname, medal, guard_level, source):
@@ -670,11 +445,6 @@ async def handle_user_entry(uid, uname, medal, guard_level, source):
         is_yqz_allowed = (uid == YQZ_ID) and (now - yqz_last_welcome_time > 5)
         trigger_interact = (uid not in interact_cache) or is_admin_allowed or is_yqz_allowed
         if trigger_interact:
-            # if uid != ADMIN_ID:
-            #     interact_cache.add(uid)
-            #     MEMORY["audience"]["interact_cache"] = list(interact_cache)
-            #     MEMORY["audience"]["total_audience"] = MEMORY["audience"].get("total_audience", 0) + 1
-            
             if uid == ADMIN_ID:
                 admin_last_welcome_time = now
                 if STATUS != 0:
@@ -682,7 +452,7 @@ async def handle_user_entry(uid, uname, medal, guard_level, source):
                     target_date = datetime(2026, 3, 20)
                     today = datetime.now().date()
                     days_passed = abs((target_date.date() - today).days) + 1
-                    if days_passed % 10 == 0 and uid not in interact_cache:
+                    if days_passed % 10 == 0 and uid not in interact_cache and days_passed != 250:
                         reply = f"[欢迎姬]哇！今天是卡米宝宝和云宝相遇的{days_passed}天哎！{days_passed}天快乐！"
                     elif today.month == 3 and today.day == 20 and uid not in interact_cache:
                         years_passed = today.year - 2026
@@ -1003,287 +773,180 @@ async def on_preparing(event):
     # MEMORY["meta"]["live_time"] = 0
     save_json("files/meta.json", MEMORY["meta"])
 
-#     with open("debug/interact_word_v2.json", "a", encoding="utf-8") as f:
-#         json.dump(event, f, ensure_ascii=False, indent=2)
-    # print(f"INTERACT_WORD_V2: {event}")
-
-# @room.on('ENTRY_EFFECT_MUST_RECEIVE')
-# async def on_entry_effect_must_receive(event):
-#     with open("debug/entry_effect_must_receive.json", "a", encoding="utf-8") as f:
-#         json.dump(event, f, ensure_ascii=False, indent=2)
-    # print(f"ENTRY_EFFECT_MUST_RECEIVE: {event}")
-
-'''
-@room.on('SUPER_CHAT_MESSAGE_JPN')
-async def on_super_chat_message_jpn(event):
-    print(f"SUPER_CHAT_MESSAGE_JPN: {event}")
-
-@room.on('SUPER_CHAT_MESSAGE_DELETE')
-async def on_super_chat_message_delete(event):
-    print(f"SUPER_CHAT_MESSAGE_DELETE: {event}")
-
-@room.on('WELCOME')
-async def on_welcome(event):
-    print(f"WELCOME: {event}")
-
-@room.on('WELCOME_GUARD')
-async def on_welcome_guard(event):
-    print(f"WELCOME_GUARD: {event}")
-
-@room.on('NOTICE_MSG')
-async def on_notice_msg(event):
-    print(f"NOTICE_MSG: {event}")
-
-@room.on('ROOM_REAL_TIME_MESSAGE_UPDATE')
-async def on_room_real_time_message_update(event):
-    print(f"ROOM_REAL_TIME_MESSAGE_UPDATE: {event}")
-
-
-
-@room.on('ROOM_RANK')
-async def on_room_rank(event):
-    print(f"ROOM_RANK: {event}")
-
-@room.on('INTERACT_WORD_V2')
-async def on_interact_word_v2(event):
-    print(f"INTERACT_WORD_V2: {event}")
-
-@room.on('ACTIVITY_BANNER_UPDATE_V2')
-async def on_activity_banner_update_v2(event):
-    print(f"ACTIVITY_BANNER_UPDATE_V2: {event}")
-
-@room.on('DM_INTERACTION')
-async def on_dm_interaction(event):
-    print(f"DM_INTERACTION: {event}")
-
-@room.on('GIFT_STAR_PROCESS')
-async def on_gift_star_process(event):
-    print(f"GIFT_STAR_PROCESS: {event}")
-
-# @room.on('ONLINE_RANK_V3')
-# async def on_online_rank_v3(event):
-    # print(f"ONLINE_RANK_V3: {event}")
-
-@room.on('LOG_IN_NOTICE')
-async def on_log_in_notice(event):
-    print(f"LOG_IN_NOTICE: {event}")
-
-@room.on('ONLINE_RANK_TOP3')
-async def on_online_rank_top3(event):
-    print(f"ONLINE_RANK_TOP3: {event}")
-
-@room.on('POPULAR_RANK_CHANGED')
-async def on_popular_rank_changed(event):
-    print(f"POPULAR_RANK_CHANGED: {event}")
-
-@room.on('HOT_RANK_CHANGED')
-async def on_hot_rank_changed(event):
-    print(f"HOT_RANK_CHANGED: {event}")
-
-@room.on('HOT_RANK_CHANGED_V2')
-async def on_hot_rank_changed_v2(event):
-    print(f"HOT_RANK_CHANGED_V2: {event}")
-
-@room.on('HOT_RANK_SETTLEMENT')
-async def on_hot_rank_settlement(event):
-    print(f"HOT_RANK_SETTLEMENT: {event}")
-
-@room.on('HOT_RANK_SETTLEMENT_V2')
-async def on_hot_rank_settlement_v2(event):
-    print(f"HOT_RANK_SETTLEMENT_V2: {event}")
-
-@room.on('LIKE_INFO_V3_CLICK')
-async def on_like_info_v3_click(event):
-    print(f"LIKE_INFO_V3_CLICK: {event}")
-
-@room.on('LIKE_INFO_V3_UPDATE')
-async def on_like_info_v3_update(event):
-    print(f"LIKE_INFO_V3_UPDATE: {event}")
-
-@room.on('POPULARITY_RED_POCKET_START')
-async def on_popularity_red_pocket_start(event):
-    print(f"POPULARITY_RED_POCKET_START: {event}")
-
-@room.on('POPULARITY_RED_POCKET_NEW')
-async def on_popularity_red_pocket_new(event):
-    print(f"POPULARITY_RED_POCKET_NEW: {event}")
-
-@room.on('POPULARITY_RED_POCKET_WINNER_LIST')
-async def on_popularity_red_pocket_winner_list(event):
-    print(f"POPULARITY_RED_POCKET_WINNER_LIST: {event}")
-
-@room.on('WATCHED_CHANGE')
-async def on_watched_change(event):
-    print(f"WATCHED_CHANGE: {event}")
-
-
-
-@room.on('FULL_SCREEN_SPECIAL_EFFECT')
-async def on_full_screen_special_effect(event):
-    print(f"FULL_SCREEN_SPECIAL_EFFECT: {event}")
-
-@room.on('AREA_RANK_CHANGED')
-async def on_area_rank_changed(event):
-    print(f"AREA_RANK_CHANGED: {event}")
-
-@room.on('COMMON_NOTICE_DANMAKU')
-async def on_common_notice_danmaku(event):
-    print(f"COMMON_NOTICE_DANMAKU: {event}")
-
-@room.on('ROOM_CHANGE')
-async def on_room_change(event):
-    print(f"ROOM_CHANGE: {event}")
-
-@room.on('ROOM_CONTENT_AUDIT_REPORT')
-async def on_room_content_audit_report(event):
-    print(f"ROOM_CONTENT_AUDIT_REPORT: {event}")
-
-@room.on('SUPER_CHAT_ENTRANCE')
-async def on_super_chat_entrance(event):
-    print(f"SUPER_CHAT_ENTRANCE: {event}")
-
-@room.on('WIDGET_BANNER')
-async def on_widget_banner(event):
-    print(f"WIDGET_BANNER: {event}")
-
-@room.on('WIDGET_WISH_LIST')
-async def on_widget_wish_list(event):
-    print(f"WIDGET_WISH_LIST: {event}")
-
-@room.on('WIDGET_WISH_INFO')
-async def on_widget_wish_info(event):
-    print(f"WIDGET_WISH_INFO: {event}")
-
-# @room.on('STOP_LIVE_ROOM_LIST')
-# async def on_stop_live_room_list(event):
-    # print(f"STOP_LIVE_ROOM_LIST: {event}")
-
-@room.on('SYS_MSG')
-async def on_sys_msg(event):
-    print(f"SYS_MSG: {event}")
-
-@room.on('WARNING')
-async def on_warning(event):
-    print(f"WARNING: {event}")
-
-@room.on('CUT_OFF')
-async def on_cut_off(event):
-    print(f"CUT_OFF: {event}")
-
-@room.on('CUT_OFF_V2')
-async def on_cut_off_v2(event):
-    print(f"CUT_OFF_V2: {event}")
-
-@room.on('ANCHOR_ECOLOGY_LIVING_DIALOG')
-async def on_anchor_ecology_living_dialog(event):
-    print(f"ANCHOR_ECOLOGY_LIVING_DIALOG: {event}")
-
-@room.on('CHANGE_ROOM_INFO')
-async def on_change_room_info(event):
-    print(f"CHANGE_ROOM_INFO: {event}")
-
-@room.on('ROOM_SKIN_MSG')
-async def on_room_skin_msg(event):
-    print(f"ROOM_SKIN_MSG: {event}")
-
-@room.on('ROOM_SILENT_ON')
-async def on_room_silent_on(event):
-    print(f"ROOM_SILENT_ON: {event}")
-
-@room.on('ROOM_SILENT_OFF')
-async def on_room_silent_off(event):
-    print(f"ROOM_SILENT_OFF: {event}")
-
-@room.on('ROOM_BLOCK_MSG')
-async def on_room_block_msg(event):
-    print(f"ROOM_BLOCK_MSG: {event}")
-
-@room.on('ROOM_ADMINS')
-async def on_room_admins(event):
-    print(f"ROOM_ADMINS: {event}")
-
-@room.on('room_admin_entrance')
-async def on_room_admin_entrance(event):
-    print(f"room_admin_entrance: {event}")
-
-@room.on('ROOM_ADMIN_REVOKE')
-async def on_room_admin_revoke(event):
-    print(f"ROOM_ADMIN_REVOKE: {event}")
-
-@room.on('ANCHOR_LOT_CHECKSTATUS')
-async def on_anchor_lot_checkstatus(event):
-    print(f"ANCHOR_LOT_CHECKSTATUS: {event}")
-
-@room.on('ANCHOR_LOT_START')
-async def on_anchor_lot_start(event):
-    print(f"ANCHOR_LOT_START: {event}")
-
-@room.on('ANCHOR_LOT_END')
-async def on_anchor_lot_end(event):
-    print(f"ANCHOR_LOT_END: {event}")
-
-@room.on('ANCHOR_LOT_AWARD')
-async def on_anchor_lot_award(event):
-    print(f"ANCHOR_LOT_AWARD: {event}")
-
-@room.on('ANCHOR_LOT_NOTICE')
-async def on_anchor_lot_notice(event):
-    print(f"ANCHOR_LOT_NOTICE: {event}")
-
-@room.on('VOICE_JOIN_SWITCH')
-async def on_voice_join_switch(event):
-    print(f"VOICE_JOIN_SWITCH: {event}")
-
-@room.on('VIDEO_CONNECTION_JOIN_START')
-async def on_video_connection_join_start(event):
-    print(f"VIDEO_CONNECTION_JOIN_START: {event}")
-
-@room.on('VIDEO_CONNECTION_MSG')
-async def on_video_connection_msg(event):
-    print(f"VIDEO_CONNECTION_MSG: {event}")
-
-@room.on('VIDEO_CONNECTION_JOIN_END')
-async def on_video_connection_join_end(event):
-    print(f"VIDEO_CONNECTION_JOIN_END: {event}")
-
-@room.on('PLAY_TAG')
-async def on_play_tag(event):
-    print(f"PLAY_TAG: {event}")
-
-@room.on('OTHER_SLICE_LOADING_RESULT')
-async def on_other_slice_loading_result(event):
-    print(f"OTHER_SLICE_LOADING_RESULT: {event}")
-
-@room.on('GOTO_BUY_FLOW')
-async def on_goto_buy_flow(event):
-    print(f"GOTO_BUY_FLOW: {event}")
-
-@room.on('HOT_BUY_NUM')
-async def on_hot_buy_num(event):
-    print(f"HOT_BUY_NUM: {event}")
-
-@room.on('WEALTH_NOTIFY')
-async def on_wealth_notify(event):
-    print(f"WEALTH_NOTIFY: {event}")
-
-@room.on('MESSAGEBOX_USER_MEDAL_CHANGE')
-async def on_messagebox_user_medal_change(event):
-    print(f"MESSAGEBOX_USER_MEDAL_CHANGE: {event}")
-
-@room.on('MESSAGEBOX_USER_GAIN_MEDAL')
-async def on_messagebox_user_gain_medal(event):
-    print(f"MESSAGEBOX_USER_GAIN_MEDAL: {event}")
-
-@room.on('FANS_CLUB_POKE_GIFT_NOTICE')
-async def on_fans_club_poke_gift_notice(event):
-    print(f"FANS_CLUB_POKE_GIFT_NOTICE: {event}")
-'''
-
 async def cross_month_task():
     if LIVE_STATUS == 1 and MEMORY["meta"]["live_time"] != 0:
         await save_cross_month(MEMORY["meta"]["live_time"])
     else:
         await save_cross_month(0)
+
+# blivedm
+class Handler(blivedm.BaseHandler):
+    def _on_gift(self, client: blivedm.BLiveClient, message: web_models.GiftMessage):
+        asyncio.create_task(handle_gift(message))
+
+    def _on_danmaku(self, client: blivedm.BLiveClient, message: web_models.DanmakuMessage):
+        asyncio.create_task(handle_danmaku(message))
+
+async def handle_gift(message: web_models.GiftMessage):
+    global LIVE_STATUS
+    if LIVE_STATUS != 1:
+        return
+    # data = event['data']['data']
+    # uid, gift_name, num = data.get('uid'), data.get('giftName'), data.get('num', 1)
+    # uname = data.get('sender_uinfo', {}).get('base', {}).get('name', '用户')
+    # blind_data = data.get('blind_gift') or (data.get('batch_combo_send') and data['batch_combo_send'].get('blind_gift'))
+    uid = message.uid
+    gift_name = message.gift_name
+    num = message.num
+    uname = message.uname
+    blind_data = message.blind_gift_name or None
+
+    if blind_data:
+        # original_box_name = blind_data.get('original_gift_name', "盲盒")
+        # bg_cost_battery = blind_data.get('original_gift_price', 0) / 100
+        # g_profit_battery = blind_data.get('gift_tip_price', 0) / 100
+        original_box_name = message.blind_gift_name
+        bg_cost_battery = message.blind_price / 100
+        g_profit_battery = message.price / 100
+        update_box_summary(uid, uname, num, bg_cost_battery*num, g_profit_battery*num, original_box_name)
+        save_json("files/box.json", MEMORY["box"])
+        update_gift_summary(uid, uname, gift_name, num, g_profit_battery*num)
+        update_all_log(uid, uname, gift_name, g_profit_battery*num)
+        add_log(f"[盲盒] {uname} x{num} ({g_profit_battery*num:.1f} 电池)")
+
+        check_hot_reload()
+        await box_egg(uid, uname, gift_name, num, bg_cost_battery, g_profit_battery)
+        await huli_egg(uid, gift_name)
+        await check_gachi_egg(uid, None, g_profit_battery)
+        await check_global_loss_warning(uid, uname)
+
+        if g_profit_battery >= 1000:
+        # if g_profit_battery >= 5000: # for annual
+            reply = thank_gift(uid, uname, gift_name, g_profit_battery)
+            if reply:
+                await handle_thank_reply(uid, uname, reply)
+        MEMORY["meta"]["total_battery"] += g_profit_battery*num
+        await handle_total_gift_reply(YQZ_ID, MEMORY["meta"]["total_battery"])
+
+    else:
+        # total_coin = data.get('total_coin', 0)
+        # if total_coin > 0:
+        #     battery = total_coin / 100
+        # else:
+        #     battery = (data.get('price', 0) * num) / 100
+        
+        # single_battery = battery / num if num > 0 else battery
+        battery = message.total_coin / 100
+        # single_battery = message.price / 100
+        single_battery = battery / num if num > 0 else battery
+        
+        update_gift_summary(uid, uname, gift_name, num, battery)
+        update_all_log(uid, uname, gift_name, single_battery)
+        add_log(f"[礼物] {uname} {gift_name}x{num} ({battery:.1f} 电池)")
+
+        if battery >= 1000:
+            reply = thank_gift(uid, uname, gift_name, single_battery)
+            if reply:
+                await handle_thank_reply(uid, uname, reply)
+        MEMORY["meta"]["total_battery"] += battery
+        check_hot_reload()
+        await gift_egg(uid, uname, gift_name, num, single_battery)
+        await huli_egg(uid, gift_name)
+        await handle_total_gift_reply(YQZ_ID, MEMORY["meta"]["total_battery"])
+        await check_gachi_egg(uid, None, single_battery)
+
+async def handle_danmaku(message: web_models.DanmakuMessage):
+    global LIVE_STATUS
+    # data = event['data']['info']
+    # msg, uid, uname = data[1], data[2][0], data[2][1]
+    msg = message.msg
+    uid = message.uid
+    uname = message.uname
+
+    if msg == "呼叫礼物姬":
+        await call_gift(uid, uname)
+    elif "呼叫礼物姬@" in msg:
+        await call_at_gift(uid, uname, msg)
+    elif msg == "查盲盒":
+        await call_box(uid, uname, "呼叫盲盒姬")
+
+    elif msg in ["查时长", "查开播时长", "查直播时长"]:
+        # if LIVE_STATUS != 1: return
+        if uid not in PERMISSION["livetime"]: return
+        live_start_timestamp = MEMORY["meta"]["live_time"]
+        live_hours, live_mins = await load_livetime(live_start_timestamp, LIVE_STATUS)
+        if live_hours == 0 and live_mins == 0:
+            reply = f"本月云宝还没有直播哦~"
+        elif live_hours == 0 and live_mins != 0:
+            reply = f"本月云宝已经直播了{live_mins}分钟！继续加油！"
+        elif live_hours != 0 and live_mins == 0:
+            reply = f"本月云宝已经直播了{live_hours}小时！继续加油！"
+        else:
+            reply = f"本月云宝已经直播了{live_hours}小时{live_mins}分钟！继续加油！"
+        await reply_queue.put((uid, reply))
+        add_log(f"开播时长: {live_hours}h{live_mins}min")
+    
+    elif msg in ["查开播天数", "查直播天数"]:
+        # if LIVE_STATUS != 1: return
+        if uid not in PERMISSION["livetime"]: return
+        live_start_timestamp = MEMORY["meta"]["live_time"]
+        live_days = await load_livedays(live_start_timestamp, LIVE_STATUS)
+        if live_days == 0:
+            reply = f"本月云宝还没有直播哦～"
+        else:
+            reply = f"本月云宝已经直播了{live_days}天！继续加油！"
+        await reply_queue.put((uid, reply))
+        add_log(f"开播天数: {live_days}")
+  
+    # 月度全局盲盒姬
+    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(.*?)盲盒姬总部$', msg):
+        await call_month_all_box(uid, uname, msg)
+    
+    # 指定uid月度盲盒姬
+    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(.*?)盲盒姬@(\d+)$', msg):
+        await call_month_at_box(uid, uname, msg)
+    
+    # 月度盲盒姬
+    elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(.*?)盲盒姬$', msg):
+        await call_month_box(uid, uname, msg)
+    
+    # 全局盲盒姬
+    elif re.search(rf'^呼叫(.*?)盲盒姬总部$', msg):
+        await call_all_box(uid, uname, msg)
+    
+    # 指定uid盲盒姬
+    elif re.search(rf'^呼叫(.*?)盲盒姬@(\d+)$', msg):
+        await call_at_box(uid, uname, msg)
+    
+    # 盲盒姬
+    elif re.search(rf'^呼叫(.*?)盲盒姬$', msg):
+        await call_box(uid, uname, msg)
+
+    if LIVE_STATUS == 1:
+        # check_hot_reload()
+        await danmu_egg(uid, msg, DANMU_COUNT)
+        update_danmu_log(uid, uname, msg)
+
+async def run_blivedm():
+    session = aiohttp.ClientSession()
+    try:
+        session.cookie_jar.update_cookies(
+            {
+                "SESSDATA": SESSDATA,
+                "bili_jct": BILI_JCT,
+                "buvid3": BUVID3,
+            }
+        )
+        client = blivedm.BLiveClient(ROOM_ID, session=session)
+        client.set_handler(Handler())
+        client.start()
+        add_log("blivedm WebSocket 已启动")
+        try:
+            await client.join()
+        finally:
+            await client.stop_and_close()
+    finally:
+        await session.close()
 
 # FastAPI & SSL Patch
 scheduler = AsyncIOScheduler()
@@ -1420,21 +1083,6 @@ class HotGiftInput(BaseModel):
     original_box_name: Optional[str] = None
 @app.post("/api/hot_gift")
 def api_hot_gift(data: HotGiftInput):
-    '''
-    curl -X POST "http://127.0.0.1:8000/api/hot_gift" \
-      -H "Content-Type: application/json" \
-      -d '{
-        "uid": ,
-        "uname": ,
-        "gift_name": ,
-        "gift_price": ,
-        "timestamp": ,
-        "count": ,
-        "is_blind_box": ,
-        "blind_cost": ,
-        "original_box_name": 
-      }'
-    '''
     uid_str = str(data.uid)
     total_price = data.gift_price * data.count
 
@@ -1491,21 +1139,6 @@ class DeleteSpecificGiftInput(BaseModel):
     
 @app.post("/api/delete_specific_gift")
 def api_delete_specific_gift(data: DeleteSpecificGiftInput):
-    r"""
-    curl -X POST "http://127.0.0.1:8000/api/delete_specific_gift" \
-      -H "Content-Type: application/json" \
-      -d '{
-        "uid": ,
-        "uname": ,
-        "gift_name": ,
-        "gift_price": ,
-        "timestamp": ,
-        "count": ,
-        "is_blind_box": ,
-        "blind_cost": ,
-        "original_box_name": 
-      }'
-    """
     uid_str = str(data.uid)
     
     target_indices = []
@@ -1613,11 +1246,6 @@ class SendDanmu(BaseModel):
     at_uid: Optional[int] = None
 @app.post("/api/send_danmu")
 async def api_send_danmu(data: SendDanmu):
-    r'''
-    curl -X POST "http://127.0.0.1:8000/api/send_danmu" \
-      -H "Content-Type: application/json" \
-      -d '{"msg":"", "at_uid": 3493074573461871}'
-    '''
     msg = data.msg.strip()
     uid = data.at_uid
 
@@ -1636,11 +1264,6 @@ class StatusInput(BaseModel):
     status: int
 @app.post("/api/set_status")
 def api_set_status(data: StatusInput):
-    '''
-    curl -X POST "http://127.0.0.1:8000/api/set_status" \
-        -H "Content-Type: application/json" \
-        -d '{"status": 0}'
-    '''
     global STATUS
     STATUS = data.status
     add_log(f"[HOT UPDATE] STATUS set to {STATUS}")
@@ -1651,11 +1274,6 @@ class PushStatusInput(BaseModel):
     push_status: int
 @app.post("/api/push_status")
 def api_push_status(data: PushStatusInput):
-    '''
-    curl -X POST "http://127.0.0.1:8000/api/push_status" \
-        -H "Content-Type: application/json" \
-        -d '{"push_status": 0}'
-    '''
     hotglobal.PUSH_STATUS = data.push_status
     add_log(f"[HOT UPDATE] STATUS set to {hotglobal.PUSH_STATUS}")
     return {"status": "success", "current_push_status": hotglobal.PUSH_STATUS}
@@ -1722,6 +1340,7 @@ async def main():
         asyncio.create_task(periodic_tasks(), name="periodic"),
         asyncio.create_task(reply_worker(), name="reply"),
         asyncio.create_task(room.connect(), name="room"),
+        asyncio.create_task(run_blivedm(), name="blivedm"),
         asyncio.create_task(dynamic_monitor(qq), name="dynamic"),
     ]
     
