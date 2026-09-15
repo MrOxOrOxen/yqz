@@ -30,7 +30,7 @@ from json_handle import load_json_files, save_json, append_to_jsonl
 from send_reply import reply_worker, name_to_uid
 from box_bot import call_box, call_all_box, call_at_box, call_month_box, call_month_all_box, call_month_at_box
 from qq_bot import QQBot, dynamic_monitor
-from mail import send_email
+from mail import send_email, send_email_text
 
 import gift_bot
 from gift_bot import *
@@ -294,6 +294,7 @@ async def periodic_tasks():
                         prepare_time = datetime.now().strftime("%H:%M")
                         prepare_timestamp = int(time.time())
                         live_start_ts = MEMORY["meta"].get("live_time", prepare_timestamp)
+                        await save_livetime(start_timestamp, prepare_timestamp)
                         live_length = (prepare_timestamp - live_start_ts) // 60
                         live_hours = live_length // 60
                         live_mins = live_length % 60
@@ -311,10 +312,30 @@ async def periodic_tasks():
                         title = MEMORY["meta"].get("title", "天  才  主  播  ！")
                         
                         try:
-                            await send_email(live_start_time, prepare_time, time_length, title)
+                            room_info = live.LiveRoom(ROOM_ID)
+                            info = await room_info.get_room_info()
+                            room_data = info.get("room_info", {})
+                            cover = room_data.get("cover", "")
+                        except Exception as e:
+                            add_log(f"[ERROR] 获取直播封面失败: {e}")
+
+                        try:
+                            if cover != "":
+                                await send_email(live_start_time, prepare_time, time_length, title, cover)
+                            else:
+                                await send_email_text(live_start_time, prepare_time, time_length, title)
                             add_log(f"[轮询兜底] 已补发下播邮件，时长: {time_length}")
                         except Exception as e:
                             add_log(f"[轮询兜底] 补发下播邮件失败: {e}")
+
+                    try:
+                        room_data = info.get("room_info", "")
+                        cover = room_data.get("cover", "")
+                        if cover:
+                            MEMORY["meta"]["cover"] = cover
+
+                    except Exception as e:
+                        add_log(f"[ERROR] 获取直播封面失败: {e}")
 
                 except Exception as e:
                     add_log(f"[轮询检测] 获取房间信息失败: {e}")
@@ -660,53 +681,26 @@ async def on_live(event):
             "type": "text",
             "data": {"text": f"标题：{title}\n房间号：27885573\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！"}
         })
-        # for gid in TARGET_GROUP_LIST:
-        #     await qq.send_mixed(segments, at_all=True, group_id=gid)
-        #     await asyncio.sleep(3)
-        pass
         
-        if hotglobal.PUSH_STATUS == 1 and ((hotglobal.PUSH_LIVE_TIMES <= 5 and hotglobal.PUSH_TIMES <= 8) or hotglobal.PUSH_TIMES == 9):
-            tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
-            await asyncio.gather(*tasks, return_exceptions=True)
-            hotglobal.increment_push_times()
-            # add_log(f"PUSH_TIMES: {hotglobal.PUSH_TIMES-1} -> {hotglobal.PUSH_TIMES}")
-            # add_log(f"PUSH_LIVE_TIMES: {hotglobal.PUSH_LIVE_TIMES-1} -> {hotglobal.PUSH_LIVE_TIMES}")
-        else:
-            tasks = [qq.send_mixed(segments, at_all=False, group_id=gid) for gid in TARGET_GROUP_LIST]
-            await asyncio.gather(*tasks, return_exceptions=True)
-            # hotglobal.increment_push_times()
-            add_log(f"PUSH_TIMES and PUSH_LIVE_TIMES remain without @all")
-        
-        # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
-        # await asyncio.sleep(5)
-        # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
-
     except Exception:
         segments = [{
             "type": "text",
             "data": {"text": f"【推送姬】开播提醒\n云崎早_haya 开播啦！\n标题：{title}\n房间号：27885573\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！"}
         }]
-
-        # for gid in TARGET_GROUP_LIST:
-        #     await qq.send_mixed(segments, at_all=True, group_id=gid)
-        #     await asyncio.sleep(3)
-        pass
-        
-        if hotglobal.PUSH_STATUS == 1 and ((hotglobal.PUSH_LIVE_TIMES <= 5 and hotglobal.PUSH_TIMES <= 8) or hotglobal.PUSH_TIMES == 9):
-            tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
-            await asyncio.gather(*tasks, return_exceptions=True)
-            hotglobal.increment_push_times()
-            # add_log(f"PUSH_TIMES: {hotglobal.PUSH_TIMES-1} -> {hotglobal.PUSH_TIMES}")
-            # add_log(f"PUSH_LIVE_TIMES: {hotglobal.PUSH_LIVE_TIMES-1} -> {hotglobal.PUSH_LIVE_TIMES}")
-        else:
-            tasks = [qq.send_mixed(segments, at_all=False, group_id=gid) for gid in TARGET_GROUP_LIST]
-            await asyncio.gather(*tasks, return_exceptions=True)
-            # hotglobal.increment_push_times()
-            add_log(f"PUSH_TIMES and PUSH_LIVE_TIMES remain without @all")
-        
-        # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
-        # await asyncio.sleep(5)
-        # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
+    
+    if hotglobal.PUSH_STATUS == 1 and ((hotglobal.PUSH_LIVE_TIMES <= 5 and hotglobal.PUSH_TIMES <= 8) or hotglobal.PUSH_TIMES == 9):
+        tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
+        await asyncio.gather(*tasks, return_exceptions=True)
+        hotglobal.increment_push_times()
+    else:
+        tasks = [qq.send_mixed(segments, at_all=False, group_id=gid) for gid in TARGET_GROUP_LIST]
+        await asyncio.gather(*tasks, return_exceptions=True)
+        # hotglobal.increment_push_times()
+        add_log(f"PUSH_TIMES and PUSH_LIVE_TIMES remain without @all")
+    
+    # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP)
+    # await asyncio.sleep(5)
+    # await qq.send_mixed(segments, at_all=True, group_id=TARGET_GROUP_FANS)
 
     try:
         process = subprocess.Popen(
@@ -741,21 +735,43 @@ async def on_preparing(event):
             time_length = f"{live_hours}小时"
         else:
             time_length = f"{live_hours}小时{live_mins}分钟"
-
-        # for gid in TARGET_GROUP_LIST:
-        #     await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=gid)
-        #     await asyncio.sleep(3)
-        pass
         
+        try:
+            room_info = live.LiveRoom(ROOM_ID)
+            info = await room_info.get_room_info()
+            room_data = info.get("room_info", {})
+            cover = room_data.get("cover", "")
+        except Exception as e:
+            add_log(f"[ERROR] 获取直播封面失败: {e}")
+
+        try:
+            segments = [
+                {"type": "text", "data": {"text": "【推送姬】下播提醒\n云崎早_haya 下播啦！\n"}},
+            ]
+            if cover:
+                segments.append({"type": "image", "data": {"file": cover}})
+                segments.append({"type": "text", "data": {"text": "\n"}})
+            segments.append({
+                "type": "text",
+                "data": {"text": f"直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~"}
+            })
+
+        except Exception as e:
+            segments = [{
+                "type": "text",
+                "data": {"text": f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~"}
+            }]
         
         if hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_LIVE_TIMES <= 5 and hotglobal.PUSH_TIMES <= 8:
-            tasks = [qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
+            # tasks = [qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
+            # await asyncio.gather(*tasks, return_exceptions=True)
+            tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
             await asyncio.gather(*tasks, return_exceptions=True)
             hotglobal.increment_push_times()
-            # add_log(f"PUSH_TIMES: {hotglobal.PUSH_TIMES-1} -> {hotglobal.PUSH_TIMES}")
-            # add_log(f"PUSH_LIVE_TIMES: {hotglobal.PUSH_LIVE_TIMES-1} -> {hotglobal.PUSH_LIVE_TIMES}")
         else:
-            tasks = [qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=False, group_id=gid) for gid in TARGET_GROUP_LIST]
+            # tasks = [qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=False, group_id=gid) for gid in TARGET_GROUP_LIST]
+            # await asyncio.gather(*tasks, return_exceptions=True)
+            tasks = [qq.send_mixed(segments, at_all=False, group_id=gid) for gid in TARGET_GROUP_LIST]
             await asyncio.gather(*tasks, return_exceptions=True)
             # hotglobal.increment_push_times()
             add_log(f"PUSH_TIMES and PUSH_LIVE_TIMES remain without @all")
@@ -767,7 +783,10 @@ async def on_preparing(event):
 
     await asyncio.sleep(5)
     title = MEMORY["meta"]["title"] or "天  才  主  播  ！"
-    await send_email(live_start_time, prepare_time, time_length, title)
+    if cover != "":
+        await send_email(live_start_time, prepare_time, time_length, title, cover)
+    else:
+        await send_email_text(live_start_time, prepare_time, time_length, title)
     await save_livetime(start_timestamp, prepare_timestamp)
     MEMORY["meta"]["title"] = title
     # MEMORY["meta"]["live_time"] = 0

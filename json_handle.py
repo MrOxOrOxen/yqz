@@ -22,6 +22,7 @@ def load_json_files():
         try:
             with open(meta_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
+                MEMORY["meta"]["cover"] = data.get("cover", "")
                 MEMORY["meta"]["live_time"] = data.get("live_time", 0)
                 MEMORY["meta"]["total_battery"] = data.get("total_battery", 0)
                 # MEMORY["meta"]["total_danmu_cnt_from_start"] = data.get("total_danmu_cnt_from_start", 0)
@@ -42,6 +43,7 @@ def load_json_files():
             add_log(f"[ERROR] Error when reading meta.json: {e}")
             MEMORY["meta"]["total_battery"] = 0
     else:
+        MEMORY["meta"]["cover"] = ""
         MEMORY["meta"]["live_time"] = 0
         MEMORY["meta"]["total_battery"] = 0
         add_log("No meta.json. Total battery starts with 0")
