@@ -41,7 +41,7 @@ from hotreload_config import HOT_RELOAD_CONFIG
 import hotglobal
 import birthday_cache_manage
 import livetime
-from livetime import load_livetime, load_livedays, save_livetime, save_cross_month
+from livetime import load_livetime, load_livetime_now, load_livedays, save_livetime, save_cross_month
 
 import blivedm
 import blivedm.models.web as web_models
@@ -876,15 +876,31 @@ async def handle_danmaku(message: web_models.DanmakuMessage):
         live_start_timestamp = MEMORY["meta"]["live_time"]
         live_hours, live_mins = await load_livetime(live_start_timestamp, LIVE_STATUS)
         if live_hours == 0 and live_mins == 0:
-            reply = f"本月云宝还没有直播哦~"
+            reply = f"[推送姬]本月云宝还没有直播哦~"
         elif live_hours == 0 and live_mins != 0:
-            reply = f"本月云宝已经直播了{live_mins}分钟！继续加油！"
+            reply = f"[推送姬]本月云宝已经直播了{live_mins}分钟！继续加油！"
         elif live_hours != 0 and live_mins == 0:
-            reply = f"本月云宝已经直播了{live_hours}小时！继续加油！"
+            reply = f"[推送姬]本月云宝已经直播了{live_hours}小时！继续加油！"
         else:
-            reply = f"本月云宝已经直播了{live_hours}小时{live_mins}分钟！继续加油！"
+            reply = f"[推送姬]本月云宝已经直播了{live_hours}小时{live_mins}分钟！继续加油！"
         await reply_queue.put((uid, reply))
-        add_log(f"开播时长: {live_hours}h{live_mins}min")
+        add_log(f"本月开播时长: {live_hours}h{live_mins}min")
+
+    elif msg in ["查本场直播时长", "查本场时长", "查本次直播时长", "查本次时长"]:
+        if LIVE_STATUS != 1: return
+        if uid not in PERMISSION["livetime"]: return
+        live_start_timestamp = MEMORY["meta"]["live_time"]
+        live_hours, live_mins = await load_livetime_now(live_start_timestamp)
+        if live_hours == 0 and live_mins == 0:
+            reply = f"[推送姬]云宝才刚开始直播哦~"
+        elif live_hours == 0 and live_mins != 0:
+            reply = f"[推送姬]云宝本次直播已经播了{live_mins}分钟！继续加油！"
+        elif live_hours != 0 and live_mins == 0:
+            reply = f"[推送姬]云宝本次直播已经播了{live_hours}小时！继续加油！"
+        else:
+            reply = f"[推送姬]云宝本次直播已经播了{live_hours}小时{live_mins}分钟！继续加油！"
+        await reply_queue.put((uid, reply))
+        add_log(f"本次开播时长: {live_hours}h{live_mins}min")
     
     elif msg in ["查开播天数", "查直播天数"]:
         # if LIVE_STATUS != 1: return
@@ -892,9 +908,9 @@ async def handle_danmaku(message: web_models.DanmakuMessage):
         live_start_timestamp = MEMORY["meta"]["live_time"]
         live_days = await load_livedays(live_start_timestamp, LIVE_STATUS)
         if live_days == 0:
-            reply = f"本月云宝还没有直播哦～"
+            reply = f"[推送姬]本月云宝还没有直播哦～"
         else:
-            reply = f"本月云宝已经直播了{live_days}天！继续加油！"
+            reply = f"[推送姬]本月云宝已经直播了{live_days}天！继续加油！"
         await reply_queue.put((uid, reply))
         add_log(f"开播天数: {live_days}")
   

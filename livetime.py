@@ -31,6 +31,13 @@ async def load_livetime(start_time, live_status):
     except Exception as e:
         add_log(f"读取 livetime.json 失败: {e}")
 
+async def load_livetime_now(start_time):
+    now = int(time.time())
+    livetime = now - start_time
+    livetime_hours = livetime // 3600
+    livetime_mins = (livetime % 3600) // 60
+    return livetime_hours, livetime_mins
+
 async def load_livedays(start_time, live_status):
     today = datetime.now().strftime("%Y%m%d")
     start_day = datetime.fromtimestamp(start_time).strftime("%Y%m%d")
