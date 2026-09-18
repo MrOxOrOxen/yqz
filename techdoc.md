@@ -4,7 +4,7 @@
 
 *Developed and written by 晚安卡米宝宝
 
-*Last updated on 15 Sep, 2026*
+*Last updated on 16 Sep, 2026*
 
 # 0 需要先知道的一些内容
 
