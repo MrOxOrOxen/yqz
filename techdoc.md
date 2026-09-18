@@ -4,7 +4,7 @@
 
 *Developed and written by 晚安卡米宝宝
 
-*Last updated on 16 Sep, 2026*
+*Last updated on 18 Sep, 2026*
 
 # 0 需要先知道的一些内容
 
@@ -117,9 +117,9 @@ FastAPI会将想要发送的数据转换成json文件的形式，并且通过上
 
 （FastAPI需要配置跨域转发，不然fetch函数会报错）
 
-## 1.2 bilibili_api
+## 1.2 api, bilibili_api与blivedm
 
-Bilibili_api是一个**非官方**的哔哩哔哩api python库，和哔哩哔哩交互的几乎所有操作都需要用到这个库。
+Bilibili_api和blivedm是**非官方**的哔哩哔哩api python库，和哔哩哔哩交互的几乎所有操作都需要用到这些库。
 
 Bilibili是异步驱动的，可以把异步理解为即使程序的某一个部分报错，和报错程序不在同一个block的程序也会正常运行，所以即使代码有些小bug，也只是这部分的功能崩溃，而不会影响大局。
 
@@ -127,7 +127,7 @@ Bilibili是异步驱动的，可以把异步理解为即使程序的某一个部
 
 ### 1.2.1 登录态cookie
 
-Bilibili_api中有些接口的调用需要账号登录，但服务器是一个没有图形交互、只有终端的东西，想要登录b站账号只能使用cookie的方式。
+Bilibili_api和blivedm中有些接口的调用需要账号登录，但服务器是一个没有图形交互、只有终端的东西，想要登录b站账号只能使用cookie的方式。
 
 一个b站账号在任何平台（比如Windows浏览器、手机app甚至是脚本里）登录时，都会生成一个cookie. 这个cookie会保存在你登录的平台上，这样你下一次访问的时候就还能保持登录状态。Bilibili_api就是利用这个cookie来实现伪登录的。
 
