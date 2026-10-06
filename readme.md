@@ -218,7 +218,7 @@ All rights reserved.
    - 电池计数器：[battery.yqzhaya.com](https://battery.yqzhaya.com)
    - SuperChat记录姬：[superchat.yqzhaya.com](https://superchat.yqzhaya.com)
   
-以上网页数据会在每天8:59（北京时间）重置。若第一天7:59至第二天7:58时间段内多次开播，数据会累加计算。
+以上网页数据会在每天8:59（北京时间）重置。若第一天8:59至第二天8:58时间段内多次开播，数据会累加计算。
   
 2. 未展示在本仓库的文件：
    
