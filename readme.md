@@ -238,7 +238,7 @@ All rights reserved.
    - Github: MrOxOrOxen（不怎么看github notification，建议用其他方式）
    - Bilibili：晚安卡米宝宝
    - QQ：通过舰长群、粉丝群或私信联系
-   - 邮件：admin@yqzhaya.com or camgamx@gmail.com
+   - 邮件：admin@yqzhaya.com
 
 ## 更新日志
 
