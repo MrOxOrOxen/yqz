@@ -54,6 +54,9 @@ STATUS = 1
 LIVE_STATUS = 0
 # PUSH_STATUS = 1
 
+OFFLINE_CONFIRM_PENDING = False
+OFFLINE_CONFIRM_TIMESTAMP = 0
+
 # code hot update
 _hot_reload_state = {}
 
@@ -247,11 +250,11 @@ def on_gift_saved():
 
 # 周期性任务
 async def periodic_tasks():
-    global last_save_time, last_log_save, LIVE_STATUS
+    global last_save_time, last_log_save, LIVE_STATUS, OFFLINE_CONFIRM_PENDING, OFFLINE_CONFIRM_TIMESTAMP
     try:
         while True:
             now = int(time.time())
-            if now - last_save_time > 30:
+            if now - last_save_time >= 30:
                 print(f"LIVE_STATUS: {LIVE_STATUS}")
                 # save_json("files/box.json", MEMORY["box"])
                 save_json("files/gift.json", MEMORY["gift"])
@@ -272,70 +275,130 @@ async def periodic_tasks():
                     info = await room_info.get_room_info()
                     real_status = 1 if info["room_info"]["live_status"] == 1 else 0
                     
-                    if real_status == 1 and LIVE_STATUS == 0:
-                        add_log(f"[轮询兜底] 检测到已开播但 LIVE_STATUS=0，自动修正")
-                        LIVE_STATUS = 1
-                        MEMORY["meta"]["live_time"] = now
-                        MEMORY["meta"]["title"] = info["room_info"].get("title", "")
-                        save_json("files/meta.json", MEMORY["meta"])
-                        try:
-                            process = subprocess.Popen(
-                                [sys.executable, "/root/bili/bili_gift_map.py"],
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE
-                            )
-                            add_log("bili_gift_map.json loaded")
-                        except Exception as e:
-                            add_log(f"Failed to run bili_gift_map.py: {e}")
+                    if real_status == 1:
+                        if OFFLINE_CONFIRM_PENDING:
+                            add_log("[轮询兜底] 上一轮疑似下播，但本轮仍在直播，取消下播判定")
+                            OFFLINE_CONFIRM_PENDING = False
+                            OFFLINE_CONFIRM_TIMESTAMP = 0
+
+                        if LIVE_STATUS == 0:
+                            add_log(f"[轮询兜底] 检测到已开播但 LIVE_STATUS=0，自动修正")
+                            LIVE_STATUS = 1
+                            MEMORY["meta"]["live_time"] = now
+                            MEMORY["meta"]["title"] = info["room_info"].get("title", "")
+                            save_json("files/meta.json", MEMORY["meta"])
+                            try:
+                                process = subprocess.Popen(
+                                    [sys.executable, "/root/bili/bili_gift_map.py"],
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE
+                                )
+                                add_log("bili_gift_map.json loaded")
+                            except Exception as e:
+                                add_log(f"Failed to run bili_gift_map.py: {e}")
 
                     elif real_status == 0 and LIVE_STATUS == 1:
-                        add_log(f"[轮询兜底] 检测到下播但 LIVE_STATUS=1，自动修正")
-                        LIVE_STATUS = 0
-                        prepare_time = datetime.now().strftime("%H:%M")
-                        prepare_timestamp = int(time.time())
-                        live_start_ts = MEMORY["meta"].get("live_time", prepare_timestamp)
-                        await save_livetime(start_timestamp, prepare_timestamp)
-                        live_length = (prepare_timestamp - live_start_ts) // 60
-                        live_hours = live_length // 60
-                        live_mins = live_length % 60
-                        
-                        if live_hours == 0 and live_mins == 0:
-                            time_length = "不足1分钟"
-                        elif live_hours == 0:
-                            time_length = f"{live_mins}分钟"
-                        elif live_mins == 0:
-                            time_length = f"{live_hours}小时"
+                        if not OFFLINE_CONFIRM_PENDING:
+                            OFFLINE_CONFIRM_PENDING = True
+                            OFFLINE_CONFIRM_TIMESTAMP = now
+                            add_log(f"[轮询兜底] 首次检测到下播但 LIVE_STATUS=1，暂不执行下播逻辑，等待下一轮轮询再次确认")
                         else:
-                            time_length = f"{live_hours}小时{live_mins}分钟"
-                        
-                        live_start_time = time.strftime("%H:%M", time.localtime(live_start_ts))
-                        title = MEMORY["meta"].get("title", "天  才  主  播  ！")
-                        
-                        try:
-                            room_info = live.LiveRoom(ROOM_ID)
-                            info = await room_info.get_room_info()
-                            room_data = info.get("room_info", {})
-                            cover = room_data.get("cover", "")
-                        except Exception as e:
-                            add_log(f"[ERROR] 获取直播封面失败: {e}")
-
-                        try:
-                            if cover != "":
-                                await send_email(live_start_time, prepare_time, time_length, title, cover)
+                            add_log(f"[轮询兜底] 检测到下播但 LIVE_STATUS=1，自动修正")
+                            
+                            LIVE_STATUS = 0
+                            if OFFLINE_CONFIRM_TIMESTAMP != 0:
+                                prepare_timestamp = OFFLINE_CONFIRM_TIMESTAMP
                             else:
-                                await send_email_text(live_start_time, prepare_time, time_length, title)
-                            add_log(f"[轮询兜底] 已补发下播邮件，时长: {time_length}")
-                        except Exception as e:
-                            add_log(f"[轮询兜底] 补发下播邮件失败: {e}")
+                                prepare_timestamp = int(time.time())
+                            # prepare_time = datetime.now().strftime("%H:%M")
+                            # prepare_timestamp = int(time.time())
+                            prepare_time = time.strftime("%H:%M", time.localtime(prepare_timestamp))
+                            OFFLINE_CONFIRM_PENDING = False
+                            OFFLINE_CONFIRM_TIMESTAMP = 0
+
+                            live_start_ts = MEMORY["meta"].get("live_time", prepare_timestamp)
+                            await save_livetime(live_start_ts, prepare_timestamp)
+                            live_length = (prepare_timestamp - live_start_ts) // 60
+                            live_hours = live_length // 60
+                            live_mins = live_length % 60
+                            
+                            if live_hours == 0 and live_mins == 0:
+                                time_length = "不足1分钟"
+                            elif live_hours == 0:
+                                time_length = f"{live_mins}分钟"
+                            elif live_mins == 0:
+                                time_length = f"{live_hours}小时"
+                            else:
+                                time_length = f"{live_hours}小时{live_mins}分钟"
+                            
+                            live_start_time = time.strftime("%H:%M", time.localtime(live_start_ts))
+                            title = MEMORY["meta"].get("title", "天  才  主  播  ！")
+                            
+                            # cover = MEMORY["meta"].get("cover", "")
+                            try:
+                                room_info = live.LiveRoom(ROOM_ID)
+                                info = await room_info.get_room_info()
+                                room_data = info.get("room_info", {})
+                                cover = room_data.get("cover", "")
+                            except Exception as e:
+                                add_log(f"[ERROR] 获取直播封面失败: {e}")
+
+                            if qq and MEMORY["meta"]["live_time"] != 0:
+                                try:
+                                    segments = [
+                                        {"type": "text", "data": {"text": f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n"}},
+                                    ]
+                                    if cover:
+                                        segments.append({"type": "image", "data": {"file": cover}})
+                                        segments.append({"type": "text", "data": {"text": "\n"}})
+                                    segments.append({
+                                        "type": "text",
+                                        "data": {"text": f"标题：{title}\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~\n（本次下播时间可能不准确）"}
+                                    })
+
+                                except Exception as e:
+                                    segments = [{
+                                        "type": "text",
+                                        "data": {"text": f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n标题：{title}\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~\n（本次下播时间可能不准确）"}
+                                    }]
+
+                                if hotglobal.PUSH_STATUS == 2:
+                                    add_log("PUSH_STATUS = 2, cancel pushing")
+                                elif hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_LIVE_TIMES <= 5 and hotglobal.PUSH_TIMES <= 8:
+                                    tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
+                                    await asyncio.gather(*tasks, return_exceptions=True)
+                                    hotglobal.increment_push_times()
+                                else:
+                                    tasks = [qq.send_mixed(segments, at_all=False, group_id=gid) for gid in TARGET_GROUP_LIST]
+                                    await asyncio.gather(*tasks, return_exceptions=True)
+                                    add_log(f"PUSH_TIMES and PUSH_LIVE_TIMES remain without @all")
+
+                                add_log("[推送姬] 下播提醒（补发）")
+
+                            try:
+                                if cover != "":
+                                    await send_email(live_start_time, prepare_time, time_length, title, cover)
+                                else:
+                                    await send_email_text(live_start_time, prepare_time, time_length, title)
+                                add_log(f"[轮询兜底] 已补发下播邮件，时长: {time_length}")
+                            except Exception as e:
+                                add_log(f"[轮询兜底] 补发下播邮件失败: {e}")
+
+                    else:
+                        OFFLINE_CONFIRM_PENDING = False
+                        OFFLINE_CONFIRM_TIMESTAMP = 0
 
                     try:
                         room_data = info.get("room_info", "")
                         cover = room_data.get("cover", "")
                         if cover:
                             MEMORY["meta"]["cover"] = cover
+                        title = room_data.get("title", "天  才  主  播  ！")
+                        MEMORY["meta"]["title"] = title
+                        save_json("files/meta.json", MEMORY["meta"])
 
                     except Exception as e:
-                        add_log(f"[ERROR] 获取直播封面失败: {e}")
+                        add_log(f"[ERROR] 获取直播封面或标题失败: {e}")
 
                 except Exception as e:
                     add_log(f"[轮询检测] 获取房间信息失败: {e}")
@@ -451,7 +514,7 @@ async def handle_user_entry(uid, uname, medal, guard_level, source):
                 if is_birthday_today(birthday_str, is_moon, only_leap):
                     trigger_birthday = True
                     if night_agree != 1:
-                        if datetime.now().strftime("%H%M") < "0800":
+                        if datetime.now().strftime("%H%M") < "0900":
                             trigger_birthday = False
                     
                     if trigger_birthday:
@@ -466,16 +529,17 @@ async def handle_user_entry(uid, uname, medal, guard_level, source):
         is_yqz_allowed = (uid == YQZ_ID) and (now - yqz_last_welcome_time > 5)
         trigger_interact = (uid not in interact_cache) or is_admin_allowed or is_yqz_allowed
         if trigger_interact:
-            if uid == ADMIN_ID:
+            uids = [ADMIN_ID, 3747563188521484]
+            if uid in uids:
                 admin_last_welcome_time = now
                 if STATUS != 0:
                     if STATUS == 2: STATUS = 1
                     target_date = datetime(2026, 3, 20)
                     today = datetime.now().date()
                     days_passed = abs((target_date.date() - today).days) + 1
-                    if days_passed % 10 == 0 and uid not in interact_cache and days_passed != 250:
+                    if days_passed % 10 == 0 and all(uid not in interact_cache for uid in uids) and days_passed != 250:
                         reply = f"[欢迎姬]哇！今天是卡米宝宝和云宝相遇的{days_passed}天哎！{days_passed}天快乐！"
-                    elif today.month == 3 and today.day == 20 and uid not in interact_cache:
+                    elif today.month == 3 and today.day == 20 and all(uid not in interact_cache for uid in uids):
                         years_passed = today.year - 2026
                         reply = f"[欢迎姬]哇！今天是卡米宝宝和云宝相遇的{years_passed}周年哎！{years_passed}周年快乐！"
                     else:
@@ -636,7 +700,12 @@ async def on_common_notice_danmaku(event):
 @room.on('LIVE')
 async def on_live(event):
     add_log("[LOG] LIVE")
-    global LIVE_STATUS
+    global LIVE_STATUS, OFFLINE_CONFIRM_PENDING, OFFLINE_CONFIRM_TIMESTAMP
+
+    OFFLINE_CONFIRM_PENDING = False
+    OFFLINE_CONFIRM_TIMESTAMP = 0
+
+    now_time = datetime.now()
 
     title = MEMORY["meta"]["title"]
     room_data = {}
@@ -655,10 +724,18 @@ async def on_live(event):
         return
 
     MEMORY["meta"]["title"] = title
-    LIVE_STATUS = 1
-
-    live_time = datetime.now().strftime("%H:%M")
-    live_timestamp = int(time.time())
+    
+    if LIVE_STATUS != 1:
+        live_time = now_time.strftime("%H:%M")
+        live_timestamp = int(time.time())
+    else:
+        live_timestamp = MEMORY["meta"]["live_time"]
+        live_time = now_time.strftime("%H:%M")
+        if MEMORY["meta"]["temp_timestamp"] == 0:
+            await save_livetime(MEMORY["meta"]["live_time"], int(time.time()))
+        else:
+            await save_livetime(MEMORY["meta"]["temp_timestamp"], int(time.time()))
+        MEMORY["meta"]["temp_timestamp"] = int(time.time())
     if live_timestamp - MEMORY["meta"]["live_time"] <= 5:
         return
     MEMORY["meta"]["live_time"] = live_timestamp
@@ -666,6 +743,7 @@ async def on_live(event):
     
     save_json("files/meta.json", MEMORY["meta"])
 
+    LIVE_STATUS = 1
     if not qq:
         return
 
@@ -688,7 +766,9 @@ async def on_live(event):
             "data": {"text": f"【推送姬】开播提醒\n云崎早_haya 开播啦！\n标题：{title}\n房间号：27885573\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！"}
         }]
     
-    if hotglobal.PUSH_STATUS == 1 and ((hotglobal.PUSH_LIVE_TIMES <= 5 and hotglobal.PUSH_TIMES <= 8) or hotglobal.PUSH_TIMES == 9):
+    if hotglobal.PUSH_STATUS == 2:
+         add_log("PUSH_STATUS = 2, cancel pushing")
+    elif hotglobal.PUSH_STATUS == 1 and ((hotglobal.PUSH_LIVE_TIMES <= 5 and hotglobal.PUSH_TIMES <= 8) or hotglobal.PUSH_TIMES == 9):
         tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
         await asyncio.gather(*tasks, return_exceptions=True)
         hotglobal.increment_push_times()
@@ -712,11 +792,21 @@ async def on_live(event):
     except Exception as e:
         add_log(f"Failed to run bili_gift_map.py: {e}")
 
+    livetime_temp_file = "stable_json/livetime_temp.txt"
+    try:
+        os.makedirs(os.path.dirname(livetime_temp_file), exist_ok=True)
+        with open(livetime_temp_file, "a", encoding="utf-8") as f:
+            f.write(now_time.strftime("%Y%m%d-%H%M") + "\n")
+    except Exception as e:
+        print(f"[ERROR] Failed to write livetime_temp.txt: {e}")
+
 @room.on('PREPARING')
 async def on_preparing(event):
-    global LIVE_STATUS
+    global LIVE_STATUS, OFFLINE_CONFIRM_PENDING, OFFLINE_CONFIRM_TIMESTAMP
     if LIVE_STATUS != 1:
         return
+    OFFLINE_CONFIRM_PENDING = False
+    OFFLINE_CONFIRM_TIMESTAMP = 0
     LIVE_STATUS = 0
     add_log("[LOG] PREPARING")
     prepare_time = datetime.now().strftime("%H:%M")
@@ -726,6 +816,16 @@ async def on_preparing(event):
     live_hours = int(live_length) // 60
     live_mins = int(live_length) % 60
     live_start_time = time.strftime("%H:%M", time.localtime(MEMORY["meta"]["live_time"]))
+    
+    try:
+        room_info = live.LiveRoom(ROOM_ID)
+        info = await room_info.get_room_info()
+        room_data = info.get("room_info", {})
+        cover = room_data.get("cover", "")
+        title = room_data.get("title", "天  才  主  播  ！")
+    except Exception as e:
+        add_log(f"[ERROR] 获取直播封面或标题失败: {e}")
+
     if qq and MEMORY["meta"]["live_time"] != 0:
         if live_hours == 0 and live_mins == 0:
             time_length = "不足1分钟"
@@ -735,34 +835,28 @@ async def on_preparing(event):
             time_length = f"{live_hours}小时"
         else:
             time_length = f"{live_hours}小时{live_mins}分钟"
-        
-        try:
-            room_info = live.LiveRoom(ROOM_ID)
-            info = await room_info.get_room_info()
-            room_data = info.get("room_info", {})
-            cover = room_data.get("cover", "")
-        except Exception as e:
-            add_log(f"[ERROR] 获取直播封面失败: {e}")
 
         try:
             segments = [
-                {"type": "text", "data": {"text": "【推送姬】下播提醒\n云崎早_haya 下播啦！\n"}},
+                {"type": "text", "data": {"text": f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n"}},
             ]
             if cover:
                 segments.append({"type": "image", "data": {"file": cover}})
                 segments.append({"type": "text", "data": {"text": "\n"}})
             segments.append({
                 "type": "text",
-                "data": {"text": f"直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~"}
+                "data": {"text": f"标题：{title}\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~"}
             })
 
         except Exception as e:
             segments = [{
                 "type": "text",
-                "data": {"text": f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~"}
+                "data": {"text": f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n标题：{title}\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~"}
             }]
         
-        if hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_LIVE_TIMES <= 5 and hotglobal.PUSH_TIMES <= 8:
+        if hotglobal.PUSH_STATUS == 2:
+            add_log("PUSH_STATUS = 2, cancel pushing")
+        elif hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_LIVE_TIMES <= 5 and hotglobal.PUSH_TIMES <= 8:
             # tasks = [qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
             # await asyncio.gather(*tasks, return_exceptions=True)
             tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
@@ -781,8 +875,8 @@ async def on_preparing(event):
         # await qq.text(f"【推送姬】下播提醒\n云崎早_haya 下播啦！\n直播时间：{live_start_time}-{prepare_time}（{time_length}）\n感谢大家观看~", at_all=True, group_id=TARGET_GROUP_FANS)
         add_log("[推送姬] 下播提醒")
 
-    await asyncio.sleep(5)
-    title = MEMORY["meta"]["title"] or "天  才  主  播  ！"
+    # await asyncio.sleep(5)
+    # title = MEMORY["meta"]["title"] or "天  才  主  播  ！"
     if cover != "":
         await send_email(live_start_time, prepare_time, time_length, title, cover)
     else:
@@ -899,9 +993,15 @@ async def handle_danmaku(message: web_models.DanmakuMessage):
         elif live_hours == 0 and live_mins != 0:
             reply = f"[推送姬]本月云宝已经直播了{live_mins}分钟！继续加油！"
         elif live_hours != 0 and live_mins == 0:
-            reply = f"[推送姬]本月云宝已经直播了{live_hours}小时！继续加油！"
+            if live_hours >= 90:
+                reply = f"[推送姬]本月云宝已经直播了{live_hours}小时！时长已经达标啦！"
+            else:
+                reply = f"[推送姬]本月云宝已经直播了{live_hours}小时！继续加油！"
         else:
-            reply = f"[推送姬]本月云宝已经直播了{live_hours}小时{live_mins}分钟！继续加油！"
+            if live_hours >= 90:
+                reply = f"[推送姬]本月云宝已经直播了{live_hours}小时{live_mins}分钟！时长已经达标啦！"
+            else:
+                reply = f"[推送姬]本月云宝已经直播了{live_hours}小时{live_mins}分钟！继续加油！"
         await reply_queue.put((uid, reply))
         add_log(f"本月开播时长: {live_hours}h{live_mins}min")
 
@@ -929,10 +1029,13 @@ async def handle_danmaku(message: web_models.DanmakuMessage):
         if live_days == 0:
             reply = f"[推送姬]本月云宝还没有直播哦～"
         else:
-            reply = f"[推送姬]本月云宝已经直播了{live_days}天！继续加油！"
+            if live_days >= 22:
+                reply = f"[推送姬]本月云宝已经直播了{live_days}天！天数已经达标啦！"
+            else:
+                reply = f"[推送姬]本月云宝已经直播了{live_days}天！继续加油！"
         await reply_queue.put((uid, reply))
         add_log(f"开播天数: {live_days}")
-  
+
     # 月度全局盲盒姬
     elif re.search(rf'^呼叫(?:\d{{1,2}}|一|二|三|四|五|六|七|八|九|十|十一|十二)月(.*?)盲盒姬总部$', msg):
         await call_month_all_box(uid, uname, msg)

@@ -9,6 +9,7 @@
             --primary-color: #f35e99;
             --bg-color: #000000;
             --card-bg: rgba(20, 20, 20, 0.8);
+            --text-title: #ff0000;
             --text-main: #ffffff;
             --text-dim: #8c8c8c;
             --accent-color: #f79fbc;
@@ -35,7 +36,7 @@
         h1 {
             text-align: center;
             letter-spacing: 2px;
-            background: linear-gradient(to right, #fff, var(--text-main));
+            background: linear-gradient(to right, #fff, var(--text-title));
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -200,7 +201,7 @@
                 const resJson = await response.json();
                 const dataList = resJson.list || [];
 
-                statusElement.innerText = `最后更新: ${new Date().toLocaleTimeString()}（自动同步中）`;
+                statusElement.innerText = `最后更新: ${new Date().toLocaleTimeString()}`;
                 statusElement.style.color = "var(--text-dim)";
 
                 if (!Array.isArray(dataList) || dataList.length === 0) {

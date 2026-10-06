@@ -296,7 +296,7 @@ async def dynamic_monitor(qq_bot):
                     if not forward_text and topic:
                         forward_text = topic.get('name', '') or topic.get('desc', '')
 
-                    segments.append({"type": "text", "data": {"text": f"{header}\n云崎早_haya 转发了动态！\n"}})
+                    segments.append({"type": "text", "data": {"text": f"{header}\n云崎早_haya 转发了动态！\n\n"}})
 
                     if forward_text.strip():
                         segments.append({"type": "text", "data": {"text": f"{forward_text}\n\n"}})
@@ -316,11 +316,11 @@ async def dynamic_monitor(qq_bot):
                         origin_text = orig_info['text']
                         if orig_info['title'] and orig_info['title'] != orig_info['text']:
                             if origin_text and len(origin_text) > 250:
-                                origin_text = origin_text[:250] + "..."
+                                origin_text = origin_text[:250] + "...\n（该动态较长，后面的部分已被省略）"
                             origin_text = f"{orig_info['title']}\n{origin_text}" if origin_text else orig_info['title']
                         else:
                             if origin_text and len(origin_text) > 250:
-                                origin_text = origin_text[:250] + "..."
+                                origin_text = origin_text[:250] + "...\n（该动态较长，后面的部分已被省略）"
 
                         if not origin_text:
                             origin_text = "[该动态无文字内容]"
@@ -332,14 +332,16 @@ async def dynamic_monitor(qq_bot):
                             orig_author_module = orig_modules.get('module_author', {})
                             orig_author = orig_author_module.get('name', '未知用户')
                         
-                        segments.append({"type": "text", "data": {"text": f"===\n原动态：{orig_author}\n{origin_text}\n===\n"}})
+                        segments.append({"type": "text", "data": {"text": f"===\n原动态：{orig_author}\n\n{origin_text}\n===\n"}})
                     else:
                         segments.append({"type": "text", "data": {"text": "===\n原动态已删除或不可见\n===\n"}})
 
                     segments.append({"type": "text", "data": {"text": f"动态地址：{link}"}})
 
                     # current_time = datetime.now()
-                    if qq_bot and hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_TIMES <= 9:
+                    if hotglobal.PUSH_STATUS == 2:
+                        add_log("PUSH_STATUS = 2, cancel pushing")
+                    elif qq_bot and hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_TIMES <= 9:
                         # if current_time > baseline_end:
                         tasks = [qq_bot.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
                         await asyncio.gather(*tasks, return_exceptions=True)
@@ -459,7 +461,9 @@ async def dynamic_monitor(qq_bot):
                     add_log("[推送姬] LIVE跳过推送")
                 
                 # current_time = datetime.now()
-                if qq_bot and segments != [] and hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_TIMES <= 9:
+                if hotglobal.PUSH_STATUS == 2:
+                    add_log("PUSH_STATUS = 2, cancel pushing")
+                elif qq_bot and segments != [] and hotglobal.PUSH_STATUS == 1 and hotglobal.PUSH_TIMES <= 9:
                     # if current_time > baseline_end:
                     tasks = [qq_bot.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
                     await asyncio.gather(*tasks, return_exceptions=True)

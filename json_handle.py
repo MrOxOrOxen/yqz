@@ -24,6 +24,7 @@ def load_json_files():
                 data = json.load(f)
                 MEMORY["meta"]["cover"] = data.get("cover", "")
                 MEMORY["meta"]["live_time"] = data.get("live_time", 0)
+                MEMORY["meta"]["temp_timestamp"] = data.get("temp_timestamp", 0)
                 MEMORY["meta"]["total_battery"] = data.get("total_battery", 0)
                 # MEMORY["meta"]["total_danmu_cnt_from_start"] = data.get("total_danmu_cnt_from_start", 0)
                 MEMORY["meta"]["total_danmu_cnt_from_start"] = data.get("total_danmu_cnt_from_start", 0)
@@ -45,11 +46,21 @@ def load_json_files():
     else:
         MEMORY["meta"]["cover"] = ""
         MEMORY["meta"]["live_time"] = 0
+        MEMORY["meta"]["temp_timestamp"] = 0
         MEMORY["meta"]["total_battery"] = 0
         add_log("No meta.json. Total battery starts with 0")
+        MEMORY["meta"]["total_danmu_cnt_from_start"] = 0
+        MEMORY["meta"]["is_loss_warning_sent"] = False
+        MEMORY["meta"]["is_whole_profit_msg_sent"] = False
         # MEMORY["meta"]["next_threshold"] = random.randint(30000, 40000)
         MEMORY["meta"]["next_threshold"] = random.randint(4000, 5000)
         add_log(f"Next battery threshold: {MEMORY['meta']['next_threshold']}")
+        MEMORY["meta"]["current_gear"] = 0
+        MEMORY["meta"]["dog"] = 0
+        MEMORY["meta"]["is_birthday_msg_sent"] = False
+        MEMORY["meta"]["is_kfc_msg_sent"] = False
+        MEMORY["meta"]["is_castle_msg_sent"] = False
+        MEMORY["meta"]["is_huli_egg_sent"] = False
 
     if os.path.exists(audience_path):
         try:

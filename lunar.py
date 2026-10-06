@@ -8,11 +8,14 @@ def is_birthday_today(birthday_str, is_moon, only_leap):
         return now.strftime("%m%d") == birthday_str
 
     now_lunar = Lunar.fromDate(now)
-    today_mmdd = f"{now_lunar.getMonth():02d}{now_lunar.getDay():02d}"
+    lunar_month = now_lunar.getMonth()
+    lunar_day = now_lunar.getDay()
+    is_today_leap = lunar_month < 0
+    today_mmdd = f"{abs(lunar_month):02d}{lunar_day:02d}"
     
     target_mmdd = birthday_str.lstrip("-")
     is_leap_birthday = birthday_str.startswith("-")
-    is_today_leap = now_lunar.isLeap()
+    # is_today_leap = now_lunar.isLeap()
 
     if not is_leap_birthday:
         return (not is_today_leap) and (today_mmdd == target_mmdd)

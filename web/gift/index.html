@@ -6,18 +6,18 @@
     <title>云宝的电池计数器</title>
     <style>
         :root {
-            --primary-color: #14e601;
+            --primary-color: #00f7ff;
             --bg-color: #000000;
             --card-bg: rgba(20, 20, 20, 0.8);
             --text-main: #ffffff;
             --text-dim: #8c8c8c;
-            --accent-color: #3beb2b;
-            --dark-color: #0a7c00;
+            --accent-color: #00f7ff;
+            --dark-color: #007377;
         }
 
         body {
             font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            background: #000000;
             color: var(--text-main);
             margin: 0;
             display: flex;
@@ -172,19 +172,19 @@
 
                 switch (resJson.status) {
                     case 0:
-                        statusElement.innerText = `最后更新: ${new Date().toLocaleTimeString()}（自动同步中）\n卡米正在睡觉ing...`;
+                        statusElement.innerText = `最后更新: ${new Date().toLocaleTimeString()}\n卡米睡觉去啦，云宝晚安！`;
                         statusElement.style.color = "#8c8c8c";
                         break;
                     case 1:
-                        statusElement.innerText = `最后更新: ${new Date().toLocaleTimeString()}（自动同步中）`;
+                        statusElement.innerText = `最后更新: ${new Date().toLocaleTimeString()}`;
                         statusElement.style.color = "#8c8c8c";
                         break;
                     case 2:
                         statusElement.innerText = `卡米宝宝调试代码中，非真实数据`;
-                        statusElement.style.color = "#8c8c8c";
+                        statusElement.style.color = "#ff4d4f";
                         break;
                     case 3:
-                        statusElement.innerText = `最后更新: ${new Date().toLocaleTimeString()}（自动同步中）\n最最最可爱的云宝！三！周！年！快！乐！`;
+                        statusElement.innerText = `最后更新: ${new Date().toLocaleTimeString()}\n考试加油！`;
                         statusElement.style.color = "#8c8c8c";
                         break;
                     default:
