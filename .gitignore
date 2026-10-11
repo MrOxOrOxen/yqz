@@ -2,6 +2,11 @@ analysis/
 history_files/
 sync.bat
 sync_today.bat
+sync_yqz_today.bat
+sync_yqz_yesterday.bat
+sync_yqz_video.bat
+sync_yqz_video_today.bat
+sync_yqz_video_manual.bat
 给云宝的所有礼物！
 sync_date/
 sync_wrapper.bat

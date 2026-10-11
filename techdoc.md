@@ -4,7 +4,7 @@
 
 *Developed and written by 晚安卡米宝宝
 
-*Last updated on 10 Oct, 2026*
+*Last updated on 11 Oct, 2026*
 
 # 0 需要先知道的一些内容
 
@@ -904,7 +904,7 @@ SuperChat记录姬网页会实时同步直播的SuperChat电池数与内容，�
 ```
 item -> id_str # 动态id
      -> type # dynamic动态类型
-     -> basic -> link
+     -> basic -> jump_url
      -> modules -> module_dynamic -> major -> type # major动态类型
                                            -> opus -> pics
                                                    -> title
@@ -921,12 +921,19 @@ item -> id_str # 动态id
                                            -> ...
                                   -> desc -> text # 转发者的评语
                                   -> topic
+                -> module_author -> mid
+                                 -> pub_ts
+                -> module_dynamic -> desc -> text
      -> orig -> images
              -> cover
              -> text
              -> title
              -> modules -> module_author -> name
-                        -> module_dynamic -> major -> ...
+                        -> module_dynamic -> major -> archive -> aid
+             -> id_str
+             -> type
+             -> basic -> comment_type
+                      -> comment_id_str
 ```
 
 其中orig表示转发动态的原动态。
@@ -992,7 +999,7 @@ qq_bot.py为推送姬程序。由于NapCat允许将文本与图片混合发送�
 
 为防止动态内图片过多导致刷屏，推送姬设置了仅保留并发送第一张图片。
 
-为防止转发动态过长导致刷屏，转发动态的原动态限制字符长度为250个字符，若超出则用“...”来代替。
+为防止转发动态过长导致刷屏，转发动态的原动态限制字符长度为250个字符，若超出则用“...”来代替，并标注“该动态较长，后面的部分已被省略”。
 
 ## 3.4 消息的发送
 
@@ -1009,7 +1016,63 @@ payload = {
 
 受到http阻塞影响，目前http post采用异步并发的形式发送，即两个群通过asyncio.gather的方式完全同步推送。
 
-## 3.5 紧急停止
+## 3.5 对转发动态同时评论的处理
+
+哔哩哔哩动态接口中，普通转发、直接评论并同步转发、回复评论并同步转发这几种形式都表现为DYNAMIC_TYPE_FORWARD，无法直接根据动态类型区分，需要通过评论的API进一步判断实际操作类型。但程序返回的orig.basic中comment_type可能为0，且comment_id_str可能为空，因此需要根据原动态类型补充解析评论区信息。
+
+评论区资源类型主要包括：
+
+- 1：视频
+- 11：图文动态
+- 12：专栏
+- 14：音频
+- 17：一般动态
+
+程序首先尝试从orig.basic中获取评论区资源类型和id. 对于视频，可以直接从orig.modules.module_dynamic.major.archive.aid获取视频AV号；对于其他动态，需要通过dynamic.Dynamic(dynamic_id).get_info()单独查询原动态详情。随后通过bilibili_api.comment.get_comments_lazy()获取评论列表，主要参数为评论区资源id（oid）、评论区资源类型（type_）、分页游标（offset）以及评论排序方式（order）。返回数据的主要结构如下：
+
+```
+data -> replies
+     -> top_replies
+     -> cursor -> is_end # 是否到达末页
+               -> pagination_reply -> next_offset # 下一页游标
+```
+
+replies中，每一条评论包含的信息：
+
+```
+reply -> rpid # 评论ID
+      -> oid # 所属评论区资源ID
+      -> root # 所属一级评论ID
+      -> parent # 直接回复对象的评论ID
+      -> ctime # 评论发布时间戳
+      -> member -> mid # 评论者UID
+                -> uname # 评论者昵称
+      -> content -> message # 评论正文
+      -> rcount # 楼中楼回复数量
+      -> replies # 附带的部分楼中楼回复
+```
+
+通过比较评论的member.mid、content.message、ctime与动态中的module_author.mid、module_dynamic.desc.text、module_author.pub_ts，可以关联评论与转发动态。程序要求uid与评论正文一致，且评论发布时间与动态发布时间相差不超过10秒。
+
+### 3.5.1 一级评论
+
+匹配成功后，按照root和parent去判断评论层级。若root=0且parent=0，认为本次动态为直接发表一级评论，否则认为为非一级评论。
+
+程序会先遍历最多4页的热门一级评论与20页的时间排序一级评论，如果匹配的字段确实为一级评论但未找到，则回退到普通转发格式。
+
+对于一级评论，程序保留原动态的正文、图片及转发文字。
+
+### 3.5.2 非一级评论
+
+如果评论并非一级评论，程序会允许查询热门排序最多10页、时间排序最多12页的一级评论，并在以上一级评论（或多级评论）内查询前3页和后3页的多级评论。
+
+对于n级评论，其字段格式为rpid=n\*100, root=(n-1)\*100, parent=(n-1)\*100. 程序会先根据parent对应的评论ID查找parent评论信息。对于非一级评论，程序会优先显示直接回复对象及回复内容。
+
+如果找不到对应的parent评论，则会直接调用bilibili单条评论的查询接口（虽然但是现在这个接口已经被弃用了）。如果补查失败，程序仍保留已经找到的回复，则将原评论内容字段替换为“（推送姬没能找到原评论呜呜呜）”；如果连目标回复都没有找到，则退回普通转发动态的推送格式。
+
+此外，整个评论匹配过程设置了25秒的超时时间，如果超时，会直接回退到普通转发消息的推送格式。
+
+## 3.6 紧急停止
 
 设置可通过FastAPI热更新的常量PUSH_STATUS，用于控制推送姬是否会以@全体成员形式推送消息。若PUSH_STATUS=0，则不会@全体成员，但仍会正常推送。
 
@@ -1235,6 +1298,10 @@ CN_MONTHS = {
 注：
 1. 更新日志与readme的更新时间不一定完全相同（因为写技术文档时间比较长，如果忙的话可能会过些天才写）;
 2. 更新日志仅记录与代码**逻辑改动**相关的内容，不记录techdoc文档的更新以及一些代码小错误的修正。
+
+**2026.10.11**
+
+推送姬可识别普通转发、一级评论且同时转发、非一级评论且同时转发三种转发动态类型，并根据不同类型进行不同格式的消息推送。
 
 **2026.10.10**
 
