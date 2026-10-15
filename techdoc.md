@@ -4,7 +4,7 @@
 
 *Developed and written by 晚安卡米宝宝
 
-*Last updated on 14 Oct, 2026*
+*Last updated on 15 Oct, 2026*
 
 # 0 需要先知道的一些内容
 
@@ -902,60 +902,78 @@ SuperChat记录姬网页会实时同步直播的SuperChat电池数与内容，�
 哔哩哔哩opus接口，也就是动态接口中，单条动态（item）的大致格式如下：
 
 ```
-item -> id_str # 动态id
-     -> type # dynamic动态类型
+item -> id_str
+     -> type
      -> basic -> jump_url
-     -> modules -> module_dynamic -> major -> type # major动态类型
-                                           -> opus -> pics
-                                                   -> title
-                                                   -> summary -> text
-                                                   -> jump_url ->
-                                           -> archive -> title
-                                                      -> desc
-                                                      -> cover
-                                                      -> jump_url
-                                           -> article -> title
-                                                      -> desc
-                                                      -> cover
-                                                      -> jump_url
-                                           -> ...
-                                  -> desc -> text # 转发者的评语
-                                  -> topic
-                -> module_author -> mid
+     -> modules -> module_author -> name
+                                 -> mid
                                  -> pub_ts
                 -> module_dynamic -> desc -> text
-     -> orig -> images
-             -> cover
-             -> text
-             -> title
-             -> modules -> module_author -> name
-                        -> module_dynamic -> major -> archive -> aid
-             -> id_str
+                                  -> topic -> name # 话题名称
+                                           -> desc # 话题描述
+                                  -> major -> type
+                                           -> opus(图文动态) -> title
+                                                            -> summary -> text
+                                                            -> pics -> [i] -> url
+                                                            -> jump_url
+                                           -> archive -> aid
+                                                      -> bvid
+                                                      -> title
+                                                      -> desc
+                                                      -> cover
+                                                      -> jump_url
+                                           -> article(专栏) -> title
+                                                            -> desc
+                                                            -> summary
+                                                            -> cover
+                                                            -> jump_url
+                                           -> music -> title
+                                                    -> intro
+                                                    -> desc
+                                                    -> cover
+                                                    -> jump_url
+                                           -> draw -> title
+                                                   -> desc
+                                                   -> id
+                                                   -> items -> [i] -> url
+                                                   -> jump_url
+     -> orig -> id_str
              -> type
-             -> basic -> comment_type
-                      -> comment_id_str
+             -> basic -> comment_type # 原内容评论区资源类型
+                      -> comment_id_str # 原内容评论区资源id
+                      -> rid_str # 另一种关联资源id字段
+                      -> jump_url # 原动态地址
+             -> modules -> module_author -> name
+                                         -> mid
+                                         -> pub_ts
+                        -> module_dynamic -> desc -> text
+                                          -> major -> type
+                                                   -> opus -> summary -> text
+                                                           -> pics -> [i] -> url
+                                                   -> archive -> aid
+                                                              -> bvid
+                                                              -> title
+                                                              -> desc
+                                                              -> cover
+                                                   -> article
+                                                   -> music
+                                                   -> draw
 ```
 
 其中orig表示转发动态的原动态。
 
-major动态类型与dynamic动态类型的命名方式有所不同，这主要是因为opus接口经历了好多次迭代，导致里面的接口名称很混乱，但dynamic会把动态类型分的比较细。所以，程序选择在获取动态内容的时候走major，而在获取动态类型的时候走dynamic.
+major.type动态类型与item.type的命名方式有所不同，这主要是因为opus接口经历了好多次迭代，导致里面的接口名称很混乱，具体为：
 
-major的类型包括但不限于：
+| item.type | major.type | 动态类型 |
+| --- | --- | --- |
+| DYNAMIC_TYPE_FORWARD | null | 转发动态 |
+| DYNAMIC_TYPE_DRAW | MAJOR_TYPE_OPUS 或 MAJOR_TYPE_DRAW | 图文动态 |
+| DYNAMIC_TYPE_WORD | null | 纯文字动态 |
+| DYNAMIC_TYPE_AV | MAJOR_TYPE_ARCHIVE | 视频动态 |
+| DYNAMIC_TYPE_ARTICLE | MAJOR_TYPE_ARTICLE | 专栏动态 |
+| DYNAMIC_TYPE_MUSIC | MAJOR_TYPE_MUSIC | 音频动态 |
 
-- MAJOR_TYPE_OPUS：图文动态
-- MAJOR_TYPE_ARCHIVE：视频动态
-- MAJOR_TYPE_ARTICLE：专栏
-- MAJOR_TYPE_MUSIC：音频动态
-
-dynamic的类型包括但不限于：
-
-- DYNAMIC_TYPE_FORWARD：转发动态
-- DYNAMIC_TYPE_DRAW：图文动态
-- DYNAMIC_TYPE_WORD：纯文本动态
-- DYNAMIC_TYPE_AV：视频动态
-- DYNAMIC_TYPE_SHORT：小视频动态
-- DYNAMIC_TYPE_MUSIC：音频动态
-- DYNAMIC_TYPE_ARTICLE：专栏
+*（除此之外，还有很多动态类型未列出，代码中也未使用。）*
 
 ## 3.2 动态获取
 
@@ -967,7 +985,65 @@ dynamic的类型包括但不限于：
 
 在30s轮询中若发送多条动态，根据实测推送姬若同时向两个群发送多条动态会导致推送姬账号直接被踢下线，因此每条动态通过asyncio.sleep(3)间隔3s再发送。
 
-## 3.3 消息的组装
+## 3.3 对转发动态的特殊处理
+
+部分转发动态是由于评论的同时选中了“同时转发”而引起，因此对转发动态的处理思路为：如果为普通的转发动态或者为一级评论（也就是云崎早在动态的评论区直接评论），允许推送姬推送消息；否则不推送消息，也就是云崎早在别人的评论下评论的时候拒绝推送。因此，需要查询转发动态所属的评论区来判断：
+
+1. 是否为评论（如果找不到评论，那就是直接转发）；
+2. 是否为一级评论（如果不是一级评论，那就拒绝推送）。
+
+动态接口中，普通转发、直接评论并同步转发、回复评论并同步转发这几种形式都表现为DYNAMIC_TYPE_FORWARD，无法直接根据动态类型区分，需要通过评论的API进一步判断评论类型。但程序返回的orig.basic中comment_type可能为0，且comment_id_str可能为空（这意味着不能通过云崎早自己的动态获取到原动态的评论区信息），因此需要根据原动态的信息来解析原动态评论区的信息，从而判断是否是一级评论。
+
+注意：以下所提到的“云崎早的评论”，指的是云崎早自己转发并显示在自己主页的那条动态，并不是云崎早的真实评论。因为真实评论与云崎早实际动态发出其实完全无关，以及云崎早可能只是单纯转发动态，而不是在原动态的评论区评论。
+
+程序会从orig.basic中获取原动态类型和id，随后通过bilibili_api.comment.get_comments_lazy()获取评论列表，主要参数为评论区资源id（oid）、评论区资源类型（type_）、分页游标（offset）以及评论排序方式（order）。返回数据的主要结构如下：
+
+```
+data -> replies
+     -> top_replies
+     -> top -> upper
+     -> cursor -> is_end # 是否到达末页
+               -> pagination_reply -> next_offset # 下一页游标
+```
+
+replies中，每一条评论包含的信息：
+
+```
+reply -> rpid # 评论ID
+      -> oid # 所属评论区资源ID
+      -> root # 所属一级评论ID
+      -> parent # 直接回复对象的评论ID
+      -> ctime # 评论发布时间戳
+      -> member -> mid # 评论者UID
+                -> uname # 评论者昵称
+      -> content -> message # 评论正文
+      -> rcount # 楼中楼回复数量
+      -> replies # 附带的部分楼中楼回复
+```
+
+通过比较评论的member.mid、content.message、ctime与动态中的module_author.mid、module_dynamic.desc.text、module_author.pub_ts，可以关联评论与转发动态。
+
+### 3.3.1 一级评论
+
+一级评论列表按照时间顺序排序，因此，只需要在遍历一级评论时，查找发布时间早于云崎早的评论时间的一级评论。对于每一条一级评论，如果root=0, parent=0且uid、评论内容匹配，且时间相差在20s以内，则认为找到了云崎早的评论，直接按照转发动态格式推送消息。
+
+如果不匹配，判断一级评论的rcount是否为0（即其子评论数是否为0）。如果不为0，进入这个一级评论的所有子评论中查找是否有符合的评论；如果为0，直接判断下一条一级评论。
+
+如果所有一级评论查找完之后仍未匹配，则认为是普通的转发动态，可以按照转发动态的格式推送消息。
+
+### 3.3.2 非一级评论
+
+非一级评论列表也按照时间顺序排序，而不是按照楼层排序。也就是说，不同楼层的评论实际上会混在一起。
+
+如果进入了非一级评论的筛选，则根据云崎早的动态时间，通过二分法查询云崎早评论可能的所属页码，具体步骤为：
+
+1. 获取第一页与最后一页的最早和最晚的评论时间，判断目标时间是否在整个楼层内；
+2. 二分查找，获取中间页的最早最晚评论时间，决定向前还是向后查询，以此类推；
+3. 直到查询到一个页面的最早最晚评论时间覆盖云崎早的评论时间以后，再在这一页逐条核对信息。
+4. 如果信息匹配，则认为云崎早的评论是多级评论，拒绝推送；
+5. 如果信息不匹配，则继续查找下一条一级评论。
+
+## 3.4 消息的组装
 
 qq_bot.py为推送姬程序。由于NapCat允许将文本与图片混合发送，因此可先将需要发送的文本与图片内容逐个排列好，再直接交给NapCat推送。
 
@@ -1001,7 +1077,7 @@ qq_bot.py为推送姬程序。由于NapCat允许将文本与图片混合发送�
 
 为防止转发动态过长导致刷屏，转发动态的原动态限制字符长度为250个字符，若超出则用“...”来代替，并标注“该动态较长，后面的部分已被省略”。
 
-## 3.4 消息的发送
+## 3.5 消息的发送
 
 将拼接好的segments与群号拼接成一个字典：
 
@@ -1015,60 +1091,6 @@ payload = {
 向服务器上的NapCat API节点发起http post请求，其中，payload以json格式传入，从而实现消息的推送。
 
 受到http阻塞影响，目前http post采用异步并发的形式发送，即两个群通过asyncio.gather的方式完全同步推送。
-
-## 3.5 对转发动态同时评论的处理（已弃用）
-
-哔哩哔哩动态接口中，普通转发、直接评论并同步转发、回复评论并同步转发这几种形式都表现为DYNAMIC_TYPE_FORWARD，无法直接根据动态类型区分，需要通过评论的API进一步判断实际操作类型。但程序返回的orig.basic中comment_type可能为0，且comment_id_str可能为空，因此需要根据原动态类型补充解析评论区信息。
-
-评论区资源类型主要包括：
-
-- 1：视频
-- 11：图文动态
-- 12：专栏
-- 14：音频
-- 17：一般动态
-
-程序首先尝试从orig.basic中获取评论区资源类型和id. 对于视频，可以直接从orig.modules.module_dynamic.major.archive.aid获取视频AV号；对于纯文字或图文动态，直接获取原动态id；对于其他动态，需要通过dynamic.Dynamic(dynamic_id).get_info()单独查询原动态详情。随后通过bilibili_api.comment.get_comments_lazy()获取评论列表，主要参数为评论区资源id（oid）、评论区资源类型（type_）、分页游标（offset）以及评论排序方式（order）。返回数据的主要结构如下：
-
-```
-data -> replies
-     -> top_replies
-     -> cursor -> is_end # 是否到达末页
-               -> pagination_reply -> next_offset # 下一页游标
-```
-
-replies中，每一条评论包含的信息：
-
-```
-reply -> rpid # 评论ID
-      -> oid # 所属评论区资源ID
-      -> root # 所属一级评论ID
-      -> parent # 直接回复对象的评论ID
-      -> ctime # 评论发布时间戳
-      -> member -> mid # 评论者UID
-                -> uname # 评论者昵称
-      -> content -> message # 评论正文
-      -> rcount # 楼中楼回复数量
-      -> replies # 附带的部分楼中楼回复
-```
-
-通过比较评论的member.mid、content.message、ctime与动态中的module_author.mid、module_dynamic.desc.text、module_author.pub_ts，可以关联评论与转发动态。程序要求uid与评论正文一致，且评论发布时间与动态发布时间相差不超过10秒。
-
-### 3.5.1 一级评论
-
-匹配成功后，按照root和parent去判断评论层级。若root=0且parent=0，认为本次动态为直接发表一级评论，否则认为为非一级评论。最多查询4页热门一级评论，以及20页按时间排序的一级评论。
-
-对于一级评论，程序保留原动态的正文、图片及转发文字。
-
-### 3.5.2 非一级评论
-
-如果评论并非一级评论，程序会先扫描最多4页的热门一级评论，并从这些评论中挑选最多10个有楼中楼回复的候选评论深入查询；如果没有找到，再最多扫描20页时间排序的一级评论，并从这些评论中挑选最多12个有楼中楼回复的候选评论深入查询；如果仍未找到，则回退到普通评论格式。然后，在以上一级评论（或多级评论）内查询前3页和后3页的多级评论（楼中楼超过8页）或者倒序查询全部楼中楼页面（楼中楼小于等于8页）。
-
-对于n级评论（非一级评论），其字段格式类似于rpid=n\*100, root=100, parent=(n-1)\*100. 程序会先根据parent对应的评论ID查找parent评论信息。对于非一级评论，程序会优先显示直接回复对象及回复内容。
-
-如果找不到对应的parent评论，则会直接调用bilibili单条评论的查询接口（虽然但是现在这个接口已经被弃用了）。如果补查失败，程序仍保留已经找到的回复，则将原评论内容字段替换为“（推送姬没能找到原评论呜呜呜）”；如果连目标回复都没有找到，则退回普通转发动态的推送格式。
-
-此外，整个评论匹配过程设置了25秒的超时时间，如果超时，会直接回退到普通转发消息的推送格式。
 
 ## 3.6 紧急停止
 
@@ -1297,9 +1319,14 @@ CN_MONTHS = {
 1. 更新日志与readme的更新时间不一定完全相同（因为写技术文档时间比较长，如果忙的话可能会过些天才写）;
 2. 更新日志仅记录与代码**逻辑改动**相关的内容，不记录techdoc文档的更新以及一些代码小错误的修正。
 
+**2026.10.15**
+
+推送姬代码中，对转发动态进行了一级评论、多级评论以及普通转发的特殊判断。如果为非一级评论，推送姬会拒绝推送；如果无法在原动态评论区找到云崎早的转发动态内容，则认为是普通转发，正常推送。
+
 **2026.10.10**
 
-轮询查询时，若检测到LIVE_STATUS为0但实际为开播状态，推送姬会立刻推送，同时开播数据会直接写进内存和meta.json.
+1. 轮询查询时，若检测到LIVE_STATUS为0但实际为开播状态，推送姬会立刻推送，同时开播数据会直接写进内存和meta.json.
+2. 下播时会立刻运行transfer.sh处理本场的直播数据。
 
 **2026.10.6**
 
