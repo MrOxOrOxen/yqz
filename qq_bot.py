@@ -11,11 +11,9 @@ import os
 import base64
 from datetime import datetime
 import hotglobal
-
-# baseline_end = datetime(2026, 8, 16, 23, 59, 59)
+from find_comment import find_comment_from_dynamic
 
 async def download_image(url: str) -> str:
-    """下载网络图片到本地临时目录，返回本地绝对路径"""
     if not url or not str(url).startswith("http"):
         return url
 
@@ -77,28 +75,6 @@ class QQBot:
         except Exception as e:
             cost = round((time.time() - t0) * 1000, 2)
             add_log(f"[NapCat推送异常] 群{gid}: {type(e).__name__} ({cost}ms)")
-
-    async def text(self, msg: str, at_all: bool = False, group_id: str = None):
-        segments = []
-        if at_all:
-            segments.append({"type": "at", "data": {"qq": "all"}})
-        segments.append({"type": "text", "data": {"text": msg}})
-        await self.send(segments, group_id=group_id)
-
-    async def image(self, url: str, at_all: bool = False, group_id: str = None):
-        segments = []
-        if at_all:
-            segments.append({"type": "at", "data": {"qq": "all"}})
-        segments.append({"type": "image", "data": {"file": url}})
-        await self.send(segments, group_id=group_id)
-
-    async def text_with_image(self, msg: str, img_url: str, at_all: bool = False, group_id: str = None):
-        segments = []
-        if at_all:
-            segments.append({"type": "at", "data": {"qq": "all"}})
-        segments.append({"type": "text", "data": {"text": msg}})
-        segments.append({"type": "image", "data": {"file": img_url}})
-        await self.send(segments, group_id=group_id)
 
     async def send_mixed(self, segments: list, at_all: bool = False, group_id: str = None):
         """segments 是 [{"type":"text"/"image", "data":{...}}, ...] 的列表"""
@@ -273,6 +249,8 @@ async def dynamic_monitor(qq_bot):
 
             total_new = len(new_items)
             for index, item in enumerate(new_items):
+                # if item.get('type') == 'DYNAMIC_TYPE_FORWARD':
+                #     print(json.dumps(item, ensure_ascii=False, indent=2))
                 info = extract_info(item)
                 dyn_id = info['id']
                 dyn_type = info['type']
@@ -282,6 +260,32 @@ async def dynamic_monitor(qq_bot):
    
                 # ========== 转发动态 ==========
                 if dyn_type == 'DYNAMIC_TYPE_FORWARD':
+
+                    try:
+                        result = await find_comment_from_dynamic(
+                            item,
+                            credential=credential,
+                            on_progress=lambda msg: add_log(f"[评论查询] {msg}")
+                        )
+                    except Exception as e:
+                        result = {
+                            "status": "incomplete",
+                            "reason": str(e)
+                        }
+
+                    status = result.get("status", "incomplete")
+                    add_log(f"[评论查询] ID:{dyn_id} 状态:{status} 统计:{result.get('stats', {})} 错误:{result.get('errors', [])}")
+
+                    if status == "reply":
+                        add_log(f"[推送姬] 检测到楼中楼回复，跳过推送 ID:{dyn_id}")
+                        continue
+
+                    elif status == "incomplete":
+                        add_log(
+                            f"[推送姬] 评论查询未完成，继续正常推送 ID:{dyn_id} "
+                            f"原因:{result.get('reason')}"
+                        )
+
                     orig = item.get('orig')
                     orig_info = extract_info(orig) if orig else None
                     
@@ -337,6 +341,7 @@ async def dynamic_monitor(qq_bot):
                         segments.append({"type": "text", "data": {"text": "===\n原动态已删除或不可见\n===\n"}})
 
                     segments.append({"type": "text", "data": {"text": f"动态地址：{link}"}})
+
 
                     # current_time = datetime.now()
                     if hotglobal.PUSH_STATUS == 2:
@@ -459,6 +464,7 @@ async def dynamic_monitor(qq_bot):
                     segments.append({"type": "text", "data": {"text": f"{header}\n云崎早_haya 发布了新动态！\n\n（该动态类型暂不支持解析：{dyn_type}）\n\n===\n动态地址：{link}"}})
                     '''
                     add_log("[推送姬] LIVE跳过推送")
+                    continue
                 
                 # current_time = datetime.now()
                 if hotglobal.PUSH_STATUS == 2:

@@ -25,6 +25,7 @@ def load_json_files():
                 MEMORY["meta"]["cover"] = data.get("cover", "")
                 MEMORY["meta"]["live_time"] = data.get("live_time", 0)
                 MEMORY["meta"]["temp_timestamp"] = data.get("temp_timestamp", 0)
+                MEMORY["meta"]["live_status"] = 0
                 MEMORY["meta"]["total_battery"] = data.get("total_battery", 0)
                 # MEMORY["meta"]["total_danmu_cnt_from_start"] = data.get("total_danmu_cnt_from_start", 0)
                 MEMORY["meta"]["total_danmu_cnt_from_start"] = data.get("total_danmu_cnt_from_start", 0)
@@ -47,6 +48,7 @@ def load_json_files():
         MEMORY["meta"]["cover"] = ""
         MEMORY["meta"]["live_time"] = 0
         MEMORY["meta"]["temp_timestamp"] = 0
+        MEMORY["meta"]["live_status"] = 0
         MEMORY["meta"]["total_battery"] = 0
         add_log("No meta.json. Total battery starts with 0")
         MEMORY["meta"]["total_danmu_cnt_from_start"] = 0

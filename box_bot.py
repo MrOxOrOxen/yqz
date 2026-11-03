@@ -209,7 +209,7 @@ async def call_at_box(uid, uname, msg):
                     reply_box_name = f"{reply_box_name}盲盒"
 
     if cnt > 0:
-        if uid == ADMIN_ID:
+        if to_check_uid == ADMIN_ID:
             reply = f"[盲盒姬]卡米宝宝今天已抽取{cnt}个{reply_box_name}，净收益{net:.0f}电池"
         else:
             reply = f"[盲盒姬]{to_check_uname}老师今天已抽取{cnt}个{reply_box_name}，净收益{net:.0f}电池"
@@ -226,7 +226,7 @@ async def call_at_box(uid, uname, msg):
             reply += "！"
     
     elif cnt == 0:
-        if uid == ADMIN_ID:
+        if to_check_uid == ADMIN_ID:
             reply = f"[盲盒姬]卡米宝宝今天还没有开过{reply_box_name}哦"
         else:
             reply = f"[盲盒姬]{to_check_uname}老师今天还没有开过{reply_box_name}哦"
@@ -458,7 +458,7 @@ async def call_month_at_box(uid, uname, msg):
                 else:
                     reply_box_name = f"{reply_box_name}盲盒"
     if month_cnt > 0:
-        if uid == ADMIN_ID:
+        if to_check_uid == ADMIN_ID:
             reply = f"[盲盒姬]卡米宝宝{month}月已抽取{month_cnt}个{reply_box_name}，净收益{month_net:.0f}电池"
         else:
             reply = f"[盲盒姬]{to_check_uname}老师{month}月已抽取{month_cnt}个{reply_box_name}，净收益{month_net:.0f}电池"
@@ -475,7 +475,7 @@ async def call_month_at_box(uid, uname, msg):
             reply += "！"
 
     elif month_cnt == 0:
-        if uid == ADMIN_ID:
+        if to_check_uid == ADMIN_ID:
             reply = f"[盲盒姬]卡米宝宝{month}月还没有抽取过{reply_box_name}哦"
         else:
             reply = f"[盲盒姬]{to_check_uname}老师{month}月还没有抽取过{reply_box_name}哦"

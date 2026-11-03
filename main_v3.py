@@ -107,6 +107,32 @@ def check_hot_reload():
         except Exception as e:
             add_log(f"[HOT RELOAD ERROR] {filename}: {e}")
 
+def run_transfer():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    script_path = os.path.join(script_dir, "transfer.sh")
+
+    try:
+        if not os.path.isfile(script_path):
+            add_log(f"[TRANSFER ERROR] Script not found: {script_path}")
+            return
+
+        process = subprocess.Popen(
+            ["bash", script_path],
+            cwd=script_dir,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True
+        )
+
+        add_log(f"[TRANSFER] transfer.sh started, PID={process.pid}")
+
+    except Exception as e:
+        add_log(f"[TRANSFER ERROR] {e}")
+
+    except Exception as e:
+        add_log(f"[TRANSFER ERROR] {e}")
+
 async def init_get_room_status():
     global LIVE_STATUS
     room1 = live.LiveRoom(ROOM_ID)
@@ -137,25 +163,21 @@ def calc_guard_combo(gift_name, total_battery):
     return cnt, avg, avg
 
 # 内存更新
-def update_all_log(uid, uname, gift_name, battery):
+def update_all_log(uid, uname, gift_name, battery, num=1):
     if gift_name in COMBO_GUARD_PRICE:
-        cnt, first_price, follow_price = calc_guard_combo(gift_name, battery)
-        for i in range(cnt):
-            single = first_price if i == 0 else follow_price
-            MEMORY["all"].append({
-                "uid": int(uid),
-                "uname": uname,
-                "time": int(time.time()),
-                "gift_name": gift_name,
-                "gift_price": single
-            })
+        _, first_price, follow_price = calc_guard_combo(gift_name, battery)
+        prices = [first_price] + [follow_price] * (num - 1)
+        prices[-1] += battery - sum(prices)
     else:
+        prices = [battery / num] * num
+
+    for price in prices:
         MEMORY["all"].append({
             "uid": int(uid),
             "uname": uname,
             "time": int(time.time()),
             "gift_name": gift_name,
-            "gift_price": battery
+            "gift_price": price
         })
 
 def update_danmu_log(uid, uname, msg):
@@ -230,7 +252,7 @@ async def record_to_guard_log(uid, uname, price, guard_level, start_time, source
         save_json("files/box.json", MEMORY["box"])
         await check_global_loss_warning(uid, uname)
     update_gift_summary(uid, uname, guard_name, cnt, price)
-    update_all_log(uid, uname, guard_name, price)
+    update_all_log(uid, uname, guard_name, price, cnt)
     add_log(f"[{source}] {uname} {guard_name}x{cnt} ({price} 电池)")
 
     reply = thank_gift(uid, uname, guard_name, price, cnt)
@@ -284,8 +306,10 @@ async def periodic_tasks():
                         if LIVE_STATUS == 0:
                             add_log(f"[轮询兜底] 检测到已开播但 LIVE_STATUS=0，自动修正")
                             LIVE_STATUS = 1
+                            MEMORY["meta"]["live_status"] = 1
                             MEMORY["meta"]["live_time"] = now
                             MEMORY["meta"]["title"] = info["room_info"].get("title", "")
+                            MEMORY["meta"]["temp_timestamp"] = 0
                             save_json("files/meta.json", MEMORY["meta"])
                             try:
                                 process = subprocess.Popen(
@@ -297,6 +321,52 @@ async def periodic_tasks():
                             except Exception as e:
                                 add_log(f"Failed to run bili_gift_map.py: {e}")
 
+                            livetime_temp_file = "/root/bili/stable_json/livetime_temp.txt"
+                            try:
+                                os.makedirs(os.path.dirname(livetime_temp_file), exist_ok=True)
+                                with open(livetime_temp_file, "a", encoding="utf-8") as f:
+                                    f.write(time.strftime("%Y%m%d-%H%M", time.localtime(now)) + "\n")
+                                add_log("livetime_temp.txt 写入成功")
+                            except Exception as e:
+                                print(f"[ERROR] Failed to write livetime_temp.txt: {e}")
+
+                            cover = info["room_info"].get("cover", "")
+                            live_time = time.strftime("%H:%M", time.localtime(MEMORY["meta"]["live_time"])) 
+                            title = info["room_info"].get("title", "")
+                            try:
+                                segments = [
+                                    {"type": "text", "data": {"text": "【推送姬】开播提醒\n云崎早_haya 开播啦！\n"}},
+                                ]
+                                if cover:
+                                    segments.append({"type": "image", "data": {"file": cover}})
+                                    segments.append({"type": "text", "data": {"text": "\n"}})
+                                segments.append({
+                                    "type": "text",
+                                    "data": {"text": f"标题：{title}\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！\n（本次开播时间可能不准确）"}
+                                })
+                                
+                            except Exception:
+                                segments = [{
+                                    "type": "text",
+                                    "data": {"text": f"【推送姬】开播提醒\n云崎早_haya 开播啦！\n标题：{title}\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！\n（本次开播时间可能不准确）"}
+                                }]
+                            
+                            if hotglobal.PUSH_STATUS == 2:
+                                add_log("PUSH_STATUS = 2, cancel pushing")
+                            elif hotglobal.PUSH_STATUS == 1 and ((hotglobal.PUSH_LIVE_TIMES <= 5 and hotglobal.PUSH_TIMES <= 8) or hotglobal.PUSH_TIMES == 9):
+                                tasks = [qq.send_mixed(segments, at_all=True, group_id=gid) for gid in TARGET_GROUP_LIST]
+                                await asyncio.gather(*tasks, return_exceptions=True)
+                                hotglobal.increment_push_times()
+                            else:
+                                tasks = [qq.send_mixed(segments, at_all=False, group_id=gid) for gid in TARGET_GROUP_LIST]
+                                await asyncio.gather(*tasks, return_exceptions=True)
+                                # hotglobal.increment_push_times()
+                                add_log(f"PUSH_TIMES and PUSH_LIVE_TIMES remain without @all")
+
+                            add_log("[推送姬] 开播提醒（补发）")
+
+                            
+
                     elif real_status == 0 and LIVE_STATUS == 1:
                         if not OFFLINE_CONFIRM_PENDING:
                             OFFLINE_CONFIRM_PENDING = True
@@ -306,6 +376,8 @@ async def periodic_tasks():
                             add_log(f"[轮询兜底] 检测到下播但 LIVE_STATUS=1，自动修正")
                             
                             LIVE_STATUS = 0
+                            MEMORY["meta"]["live_status"] = 0
+                            run_transfer()
                             if OFFLINE_CONFIRM_TIMESTAMP != 0:
                                 prepare_timestamp = OFFLINE_CONFIRM_TIMESTAMP
                             else:
@@ -317,7 +389,11 @@ async def periodic_tasks():
                             OFFLINE_CONFIRM_TIMESTAMP = 0
 
                             live_start_ts = MEMORY["meta"].get("live_time", prepare_timestamp)
-                            await save_livetime(live_start_ts, prepare_timestamp)
+                            save_start = MEMORY["meta"].get("temp_timestamp", 0) or live_start_ts
+                            await save_livetime(save_start, prepare_timestamp)
+                            MEMORY["meta"]["temp_timestamp"] = 0
+                            save_json("files/meta.json", MEMORY["meta"])
+                            # await save_livetime(live_start_ts, prepare_timestamp)
                             live_length = (prepare_timestamp - live_start_ts) // 60
                             live_hours = live_length // 60
                             live_mins = live_length % 60
@@ -514,7 +590,7 @@ async def handle_user_entry(uid, uname, medal, guard_level, source):
                 if is_birthday_today(birthday_str, is_moon, only_leap):
                     trigger_birthday = True
                     if night_agree != 1:
-                        if datetime.now().strftime("%H%M") < "0900":
+                        if datetime.now().strftime("%H%M") < "0810":
                             trigger_birthday = False
                     
                     if trigger_birthday:
@@ -721,7 +797,7 @@ async def on_live(event):
         if title and title != MEMORY["meta"]["title"]:
             MEMORY["meta"]["title"] = title
             save_json("files/meta.json", MEMORY["meta"])
-        return
+        # return
 
     MEMORY["meta"]["title"] = title
     
@@ -737,13 +813,22 @@ async def on_live(event):
             await save_livetime(MEMORY["meta"]["temp_timestamp"], int(time.time()))
         MEMORY["meta"]["temp_timestamp"] = int(time.time())
     if live_timestamp - MEMORY["meta"]["live_time"] <= 5:
+        save_json("files/meta.json", MEMORY["meta"])
         return
     MEMORY["meta"]["live_time"] = live_timestamp
-    # save_json("files/meta.json", MEMORY["meta"])
+    MEMORY["meta"]["temp_timestamp"] = 0
     
-    save_json("files/meta.json", MEMORY["meta"])
-
     LIVE_STATUS = 1
+    MEMORY["meta"]["live_status"] = 1
+    save_json("files/meta.json", MEMORY["meta"])
+    livetime_temp_file = "/root/bili/stable_json/livetime_temp.txt"
+    try:
+        os.makedirs(os.path.dirname(livetime_temp_file), exist_ok=True)
+        with open(livetime_temp_file, "a", encoding="utf-8") as f:
+            f.write(now_time.strftime("%Y%m%d-%H%M") + "\n")
+        add_log("livetime_temp.txt 写入成功")
+    except Exception as e:
+        print(f"[ERROR] Failed to write livetime_temp.txt: {e}")
     if not qq:
         return
 
@@ -757,13 +842,13 @@ async def on_live(event):
             segments.append({"type": "text", "data": {"text": "\n"}})
         segments.append({
             "type": "text",
-            "data": {"text": f"标题：{title}\n房间号：27885573\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！"}
+            "data": {"text": f"标题：{title}\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！"}
         })
         
     except Exception:
         segments = [{
             "type": "text",
-            "data": {"text": f"【推送姬】开播提醒\n云崎早_haya 开播啦！\n标题：{title}\n房间号：27885573\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！"}
+            "data": {"text": f"【推送姬】开播提醒\n云崎早_haya 开播啦！\n标题：{title}\n开播时间：{live_time}\n直播间：https://live.bilibili.com/27885573\n快来一起观看吧~！"}
         }]
     
     if hotglobal.PUSH_STATUS == 2:
@@ -792,13 +877,7 @@ async def on_live(event):
     except Exception as e:
         add_log(f"Failed to run bili_gift_map.py: {e}")
 
-    livetime_temp_file = "stable_json/livetime_temp.txt"
-    try:
-        os.makedirs(os.path.dirname(livetime_temp_file), exist_ok=True)
-        with open(livetime_temp_file, "a", encoding="utf-8") as f:
-            f.write(now_time.strftime("%Y%m%d-%H%M") + "\n")
-    except Exception as e:
-        print(f"[ERROR] Failed to write livetime_temp.txt: {e}")
+    
 
 @room.on('PREPARING')
 async def on_preparing(event):
@@ -808,7 +887,10 @@ async def on_preparing(event):
     OFFLINE_CONFIRM_PENDING = False
     OFFLINE_CONFIRM_TIMESTAMP = 0
     LIVE_STATUS = 0
+    MEMORY["meta"]["live_status"] = 0
+    save_json("files/meta.json", MEMORY["meta"])
     add_log("[LOG] PREPARING")
+    run_transfer()
     prepare_time = datetime.now().strftime("%H:%M")
     prepare_timestamp = int(time.time())
     start_timestamp = MEMORY["meta"]["live_time"]
@@ -826,6 +908,7 @@ async def on_preparing(event):
     except Exception as e:
         add_log(f"[ERROR] 获取直播封面或标题失败: {e}")
 
+    time_length = ""
     if qq and MEMORY["meta"]["live_time"] != 0:
         if live_hours == 0 and live_mins == 0:
             time_length = "不足1分钟"
@@ -881,9 +964,12 @@ async def on_preparing(event):
         await send_email(live_start_time, prepare_time, time_length, title, cover)
     else:
         await send_email_text(live_start_time, prepare_time, time_length, title)
-    await save_livetime(start_timestamp, prepare_timestamp)
+    save_start = MEMORY["meta"]["temp_timestamp"] or start_timestamp
+    await save_livetime(save_start, prepare_timestamp)
+    # await save_livetime(start_timestamp, prepare_timestamp)
     MEMORY["meta"]["title"] = title
     # MEMORY["meta"]["live_time"] = 0
+    MEMORY["meta"]["temp_timestamp"] = 0
     save_json("files/meta.json", MEMORY["meta"])
 
 async def cross_month_task():
@@ -924,7 +1010,7 @@ async def handle_gift(message: web_models.GiftMessage):
         update_box_summary(uid, uname, num, bg_cost_battery*num, g_profit_battery*num, original_box_name)
         save_json("files/box.json", MEMORY["box"])
         update_gift_summary(uid, uname, gift_name, num, g_profit_battery*num)
-        update_all_log(uid, uname, gift_name, g_profit_battery*num)
+        update_all_log(uid, uname, gift_name, g_profit_battery*num, num)
         add_log(f"[盲盒] {uname} x{num} ({g_profit_battery*num:.1f} 电池)")
 
         check_hot_reload()
@@ -954,7 +1040,7 @@ async def handle_gift(message: web_models.GiftMessage):
         single_battery = battery / num if num > 0 else battery
         
         update_gift_summary(uid, uname, gift_name, num, battery)
-        update_all_log(uid, uname, gift_name, single_battery)
+        update_all_log(uid, uname, gift_name, battery, num)
         add_log(f"[礼物] {uname} {gift_name}x{num} ({battery:.1f} 电池)")
 
         if battery >= 1000:
@@ -1012,12 +1098,17 @@ async def handle_danmaku(message: web_models.DanmakuMessage):
         live_hours, live_mins = await load_livetime_now(live_start_timestamp)
         if live_hours == 0 and live_mins == 0:
             reply = f"[推送姬]云宝才刚开始直播哦~"
-        elif live_hours == 0 and live_mins != 0:
-            reply = f"[推送姬]云宝本次直播已经播了{live_mins}分钟！继续加油！"
-        elif live_hours != 0 and live_mins == 0:
-            reply = f"[推送姬]云宝本次直播已经播了{live_hours}小时！继续加油！"
         else:
-            reply = f"[推送姬]云宝本次直播已经播了{live_hours}小时{live_mins}分钟！继续加油！"
+            if live_hours == 0 and live_mins != 0:
+                reply = f"[推送姬]云宝本次直播已经播了{live_mins}分钟！"
+            elif live_hours != 0 and live_mins == 0:
+                reply = f"[推送姬]云宝本次直播已经播了{live_hours}小时！"
+            else:
+                reply = f"[推送姬]云宝本次直播已经播了{live_hours}小时{live_mins}分钟！"
+            if live_hours * 60 + live_mins > 180:
+                reply = reply + "要注意休息呀~"
+            else:
+                reply = reply + "继续加油！"
         await reply_queue.put((uid, reply))
         add_log(f"本次开播时长: {live_hours}h{live_mins}min")
     
@@ -1457,6 +1548,8 @@ async def main():
     add_log("=== Start ===")
     await init_get_room_status()
     load_json_files()
+    MEMORY["meta"]["live_status"] = LIVE_STATUS
+    save_json("files/meta.json", MEMORY["meta"])
 
     for filename, config in HOT_RELOAD_CONFIG.items():
         filepath = os.path.join(os.path.dirname(__file__), filename)
